@@ -2,92 +2,146 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Trader's Journal | Login</title>
+    
+    <!-- Icons & PWA -->
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/img/icon-192.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon.ico">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/img/favicon.ico">
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0f172a">
+    
+    <!-- Fonts & Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- CSS -->
     <link rel="stylesheet" href="assets/css/style.css">
-    <link rel="icon" type="image/x-icon" href="assets/img/favicon.ico">
 </head>
-<body>
-    <div class="container auth-container">
-        <div class="auth-card">
+<body class="auth-page">
+    <!-- Loading Screen -->
+    <div class="loading-screen">
+        <div class="loading-spinner"></div>
+        <p>Memuat aplikasi...</p>
+    </div>
+
+    <!-- Main Content -->
+    <div class="auth-container">
+        <div class="auth-card animate-slide-up">
+            <!-- Logo Header -->
             <div class="logo-header">
-                <i class="fas fa-chart-line logo-icon"></i>
-                <h1>Trader's Journal</h1>
-                <p class="tagline">Catat, Analisis, Profit!</p>
+                <div class="logo-icon animate-pulse">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <h1 class="logo-title">Trader's Journal</h1>
+                <p class="logo-subtitle">Analisis. Catat. Profit.</p>
             </div>
-            
-            <div class="welcome-section">
-                <h2>Selamat Datang Trader!</h2>
-                <p>Jurnal trading modern untuk Forex, Gold, dan Crypto. Simpan dan analisis semua trade Anda di satu tempat.</p>
+
+            <!-- Welcome Section -->
+            <div class="welcome-section animate-fade-in">
+                <h2><i class="fas fa-hand-wave"></i> Selamat Datang Trader!</h2>
+                <p>Platform jurnal trading modern untuk Forex, Gold, dan Crypto. Simpan semua trade Anda dengan aman.</p>
                 
-                <div class="features-list">
+                <div class="features-grid">
                     <div class="feature-item">
                         <i class="fas fa-shield-alt"></i>
-                        <span>100% Aman & Lokal</span>
-                    </div>
-                    <div class="feature-item">
-                        <i class="fas fa-bolt"></i>
-                        <span>Tanpa Backend</span>
+                        <span>100% Lokal</span>
                     </div>
                     <div class="feature-item">
                         <i class="fas fa-mobile-alt"></i>
-                        <span>Responsive</span>
+                        <span>Mobile Friendly</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-bolt"></i>
+                        <span>Cepat & Ringan</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Analisis Lengkap</span>
                     </div>
                 </div>
             </div>
-            
-            <div class="login-form">
+
+            <!-- Login Form -->
+            <form id="loginForm" class="login-form animate-slide-up delay-1">
                 <div class="input-group">
-                    <label for="username"><i class="fas fa-user"></i> Nama Trader</label>
-                    <input type="text" id="username" placeholder="Masukkan nama Anda" maxlength="20">
+                    <div class="input-icon">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <input type="text" 
+                           id="username" 
+                           placeholder="Nama Trader" 
+                           required
+                           minlength="3"
+                           maxlength="20">
                 </div>
-                
+
                 <div class="input-group">
-                    <label for="pin"><i class="fas fa-lock"></i> PIN (4 digit)</label>
-                    <input type="password" id="pin" placeholder="1234" maxlength="4" pattern="\d{4}">
-                    <small>PIN ini hanya untuk akses lokal di browser Anda</small>
+                    <div class="input-icon">
+                        <i class="fas fa-lock"></i>
+                    </div>
+                    <input type="password" 
+                           id="pin" 
+                           placeholder="PIN (4 digit)" 
+                           required
+                           pattern="\d{4}"
+                           maxlength="4"
+                           inputmode="numeric">
                 </div>
-                
-                <button id="loginBtn" class="btn-primary">
-                    <i class="fas fa-sign-in-alt"></i> Masuk ke Dashboard
-                </button>
-                
-                <div class="demo-info">
-                    <p><i class="fas fa-info-circle"></i> <strong>Demo Mode:</strong> Data tersimpan di browser Anda sendiri</p>
-                    <p><i class="fas fa-sync-alt"></i> <strong>Reset Data:</strong> Hapus cache browser untuk menghapus semua data</p>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary btn-submit">
+                        <i class="fas fa-sign-in-alt"></i>
+                        <span>Mulai Trading</span>
+                        <div class="btn-loader"></div>
+                    </button>
+                    
+                    <div class="demo-info">
+                        <i class="fas fa-info-circle"></i>
+                        <small>Data disimpan di browser Anda. Aman & pribadi.</small>
+                    </div>
                 </div>
+            </form>
+
+            <!-- Quick Actions -->
+            <div class="quick-actions animate-slide-up delay-2">
+                <a href="dashboard.html" class="quick-btn">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="journal.html" class="quick-btn">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Trade Baru</span>
+                </a>
+                <a href="history.html" class="quick-btn">
+                    <i class="fas fa-history"></i>
+                    <span>Riwayat</span>
+                </a>
             </div>
-            
-            <div class="quick-nav">
-                <a href="dashboard.html" class="nav-link">
-                    <i class="fas fa-tachometer-alt"></i> Lihat Dashboard
-                </a>
-                <a href="journal.html" class="nav-link">
-                    <i class="fas fa-plus-circle"></i> Input Trade Baru
-                </a>
-                <a href="history.html" class="nav-link">
-                    <i class="fas fa-history"></i> Lihat Riwayat
-                </a>
-            </div>
-            
-            <footer class="auth-footer">
-                <p>© 2024 Trader's Journal | Dibuat dengan <i class="fas fa-heart"></i> untuk komunitas trader</p>
-                <p class="tech-badge">
+
+            <!-- Footer -->
+            <footer class="auth-footer animate-fade-in delay-3">
+                <p>© 2024 Trader's Journal</p>
+                <div class="tech-stack">
                     <span>HTML5</span>
                     <span>CSS3</span>
                     <span>JavaScript</span>
                     <span>LocalStorage</span>
-                </p>
+                </div>
             </footer>
         </div>
     </div>
-    
+
+    <!-- Mobile Tab Bar (hidden on login) -->
+    <div class="mobile-tab-bar" style="display: none;"></div>
+
+    <!-- Scripts -->
+    <script src="assets/js/main.js"></script>
     <script src="assets/js/storage.js"></script>
     <script src="assets/js/auth.js"></script>
-    <!-- Tambahkan di semua halaman setelah script lainnya -->
-<script src="assets/js/mobile-nav.js"></script>
+    <script src="assets/js/mobile.js"></script>
 </body>
-
 </html>
