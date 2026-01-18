@@ -2,124 +2,317 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Dashboard | Trader's Journal</title>
+    
+    <!-- Icons & PWA -->
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/img/icon-192.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon.ico">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/img/favicon.ico">
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0f172a">
+    
+    <!-- Fonts & Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- CSS -->
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="nav-brand">
+    <!-- Loading Screen -->
+    <div class="loading-screen">
+        <div class="loading-spinner"></div>
+        <p>Memuat dashboard...</p>
+    </div>
+
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+        <button class="menu-toggle" id="menuToggle">
+            <span class="menu-line"></span>
+            <span class="menu-line"></span>
+            <span class="menu-line"></span>
+        </button>
+        
+        <div class="header-title">
+            <h1>Dashboard</h1>
+            <p class="header-subtitle">Analisis Performa</p>
+        </div>
+        
+        <div class="header-actions">
+            <button class="header-btn" id="refreshBtn">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+            <button class="header-btn" id="userMenuBtn">
+                <i class="fas fa-user-circle"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
                 <i class="fas fa-chart-line"></i>
-                <span>Trader's Journal</span>
+                <h2>Trader's Journal</h2>
             </div>
-            <div class="nav-menu">
-                <a href="index.html" class="nav-link"><i class="fas fa-home"></i> Home</a>
-                <a href="dashboard.html" class="nav-link active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-                <a href="journal.html" class="nav-link"><i class="fas fa-plus-circle"></i> Jurnal Baru</a>
-                <a href="history.html" class="nav-link"><i class="fas fa-history"></i> Riwayat</a>
+            <button class="sidebar-close" id="sidebarClose">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="sidebar-user">
+            <div class="user-avatar">
+                <i class="fas fa-user"></i>
             </div>
-            <div class="nav-user">
-                <span id="currentUser">Trader</span>
-                <button id="logoutBtn" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
+            <div class="user-info">
+                <h3 id="userName">Trader</h3>
+                <p id="userStats">0 Trade</p>
+            </div>
+        </div>
+        
+        <div class="sidebar-menu">
+            <a href="index.html" class="menu-item">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
+            </a>
+            <a href="dashboard.html" class="menu-item active">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="journal.html" class="menu-item">
+                <i class="fas fa-plus-circle"></i>
+                <span>Trade Baru</span>
+            </a>
+            <a href="history.html" class="menu-item">
+                <i class="fas fa-history"></i>
+                <span>Riwayat</span>
+            </a>
+            <div class="menu-divider"></div>
+            <a href="#" class="menu-item" id="exportBtn">
+                <i class="fas fa-download"></i>
+                <span>Export Data</span>
+            </a>
+            <a href="#" class="menu-item" id="settingsBtn">
+                <i class="fas fa-cog"></i>
+                <span>Settings</span>
+            </a>
+            <a href="index.html" class="menu-item logout">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-footer">
+            <p>Offline Mode</p>
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span>Aktif</span>
             </div>
         </div>
     </nav>
 
-    <!-- Dashboard Content -->
-    <div class="container">
-        <div class="dashboard-header">
-            <h1><i class="fas fa-chart-pie"></i> Dashboard Statistik</h1>
-            <p>Analisis performa trading Anda secara real-time</p>
-        </div>
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-        <!-- Stats Cards -->
-        <div class="stats-grid" id="statsGrid">
-            <!-- Stats akan diisi oleh JavaScript -->
-        </div>
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Welcome Banner -->
+        <section class="welcome-banner animate-slide-up">
+            <div class="banner-content">
+                <div class="banner-text">
+                    <h2><i class="fas fa-chart-line"></i> Dashboard Statistik</h2>
+                    <p>Analisis lengkap performa trading Anda</p>
+                </div>
+                <div class="banner-actions">
+                    <button class="btn-secondary btn-small" id="addTradeBtn">
+                        <i class="fas fa-plus"></i>
+                        Trade Baru
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Stats Grid -->
+        <section class="stats-section">
+            <div class="section-header">
+                <h3><i class="fas fa-chart-bar"></i> Ringkasan</h3>
+                <button class="btn-text" id="viewAllStats">
+                    Lihat Detail
+                </button>
+            </div>
+            
+            <div class="stats-grid">
+                <!-- Stats cards akan diisi oleh JavaScript -->
+                <div class="stat-card animate-slide-up delay-1">
+                    <div class="stat-icon">
+                        <i class="fas fa-exchange-alt"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4>Total Trade</h4>
+                        <p class="stat-value" id="totalTrades">0</p>
+                        <p class="stat-change">+0 hari ini</p>
+                    </div>
+                </div>
+                
+                <div class="stat-card animate-slide-up delay-2">
+                    <div class="stat-icon">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4>Win Rate</h4>
+                        <p class="stat-value" id="winRate">0%</p>
+                        <p class="stat-change">Wins: 0 | Loss: 0</p>
+                    </div>
+                </div>
+                
+                <div class="stat-card animate-slide-up delay-3">
+                    <div class="stat-icon">
+                        <i class="fas fa-money-bill-wave"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4>Total Profit</h4>
+                        <p class="stat-value" id="totalProfit">$0.00</p>
+                        <p class="stat-change">Bulan ini: $0.00</p>
+                    </div>
+                </div>
+                
+                <div class="stat-card animate-slide-up delay-4">
+                    <div class="stat-icon">
+                        <i class="fas fa-balance-scale"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h4>Avg Risk/Reward</h4>
+                        <p class="stat-value" id="avgRR">1:1</p>
+                        <p class="stat-change">Best: $0.00</p>
+                    </div>
+                </div>
+            </div>
+        </section>
 
         <!-- Charts Section -->
-        <div class="charts-section">
-            <div class="chart-container">
-                <h3><i class="fas fa-chart-line"></i> Performa Equity</h3>
-                <canvas id="equityChart"></canvas>
+        <section class="charts-section">
+            <div class="chart-container animate-slide-up">
+                <div class="chart-header">
+                    <h4><i class="fas fa-chart-line"></i> Equity Curve</h4>
+                    <div class="chart-actions">
+                        <button class="chart-btn active" data-period="week">1W</button>
+                        <button class="chart-btn" data-period="month">1M</button>
+                        <button class="chart-btn" data-period="all">All</button>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="equityChart"></canvas>
+                </div>
             </div>
             
-            <div class="chart-container">
-                <h3><i class="fas fa-chart-pie"></i> Distribusi Pair</h3>
-                <canvas id="pairChart"></canvas>
+            <div class="chart-container animate-slide-up delay-1">
+                <div class="chart-header">
+                    <h4><i class="fas fa-chart-pie"></i> Distribusi Pair</h4>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="pairChart"></canvas>
+                </div>
             </div>
-        </div>
+        </section>
 
         <!-- Recent Trades -->
-        <div class="recent-trades">
-            <h3><i class="fas fa-history"></i> 5 Trade Terakhir</h3>
-            <div class="table-container">
-                <table id="recentTradesTable">
-                    <thead>
-                        <tr>
-                            <th>Tanggal</th>
-                            <th>Pair</th>
-                            <th>Arah</th>
-                            <th>Lot</th>
-                            <th>Entry</th>
-                            <th>Exit</th>
-                            <th>P/L</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="recentTradesBody">
-                        <!-- Data akan diisi oleh JavaScript -->
-                    </tbody>
-                </table>
+        <section class="recent-trades-section animate-slide-up delay-2">
+            <div class="section-header">
+                <h3><i class="fas fa-history"></i> Trade Terakhir</h3>
+                <button class="btn-text" id="viewAllTrades">
+                    Lihat Semua
+                </button>
             </div>
-        </div>
+            
+            <div class="trades-list" id="recentTrades">
+                <!-- Trade items akan diisi oleh JavaScript -->
+                <div class="empty-state">
+                    <i class="fas fa-chart-line"></i>
+                    <p>Belum ada data trading</p>
+                    <button class="btn-secondary" onclick="window.location.href='journal.html'">
+                        <i class="fas fa-plus"></i> Buat Trade Pertama
+                    </button>
+                </div>
+            </div>
+        </section>
 
         <!-- Risk Calculator -->
-        <div class="risk-calculator card">
-            <h3><i class="fas fa-calculator"></i> Risk Management Calculator</h3>
-            <div class="calculator-grid">
-                <div class="calc-input">
-                    <label>Balance ($):</label>
-                    <input type="number" id="balance" placeholder="10000" value="10000">
-                </div>
-                <div class="calc-input">
-                    <label>Risk Per Trade (%):</label>
-                    <input type="number" id="riskPercent" placeholder="2" value="2" min="0.1" max="10" step="0.1">
-                </div>
-                <div class="calc-input">
-                    <label>Stop Loss (pips):</label>
-                    <input type="number" id="stopLoss" placeholder="20" value="20" min="1">
-                </div>
-                <div class="calc-input">
-                    <label>Pair:</label>
-                    <select id="pairSelect">
-                        <option value="EURUSD">EUR/USD</option>
-                        <option value="XAUUSD">Gold (XAU/USD)</option>
-                        <option value="BTCUSD">Bitcoin (BTC/USD)</option>
-                        <option value="GBPUSD">GBP/USD</option>
-                        <option value="USDJPY">USD/JPY</option>
-                    </select>
-                </div>
+        <section class="calculator-section animate-slide-up delay-3">
+            <div class="section-header">
+                <h3><i class="fas fa-calculator"></i> Risk Calculator</h3>
             </div>
             
-            <button id="calculateRisk" class="btn-secondary">Hitung Lot Size</button>
-            
-            <div class="calc-results" id="calcResults">
-                <!-- Hasil kalkulasi akan muncul di sini -->
+            <div class="calculator-card">
+                <div class="calculator-inputs">
+                    <div class="input-group">
+                        <label for="calcBalance">Balance ($)</label>
+                        <input type="number" id="calcBalance" value="10000" min="100">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="calcRisk">Risk (%)</label>
+                        <input type="range" id="calcRisk" min="0.5" max="5" step="0.5" value="2">
+                        <span class="range-value" id="riskValue">2%</span>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="calcStopLoss">Stop Loss (pips)</label>
+                        <input type="number" id="calcStopLoss" value="20" min="1">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="calcPair">Pair</label>
+                        <select id="calcPair">
+                            <option value="EURUSD">EUR/USD</option>
+                            <option value="XAUUSD">Gold (XAU/USD)</option>
+                            <option value="BTCUSD">Bitcoin (BTC/USD)</option>
+                            <option value="GBPUSD">GBP/USD</option>
+                            <option value="USDJPY">USD/JPY</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button class="btn-primary" id="calculateRiskBtn">
+                    <i class="fas fa-calculator"></i> Hitung Lot Size
+                </button>
+                
+                <div class="calculator-results" id="calculatorResults">
+                    <!-- Hasil kalkulasi akan muncul di sini -->
+                </div>
             </div>
-        </div>
-    </div>
+        </section>
+    </main>
 
+    <!-- Mobile Tab Bar -->
+    <nav class="mobile-tab-bar">
+        <a href="dashboard.html" class="tab-item active">
+            <i class="fas fa-tachometer-alt"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="journal.html" class="tab-item">
+            <i class="fas fa-plus-circle"></i>
+            <span>Trade Baru</span>
+        </a>
+        <a href="history.html" class="tab-item">
+            <i class="fas fa-history"></i>
+            <span>Riwayat</span>
+        </a>
+        <a href="#" class="tab-item" id="tabSettings">
+            <i class="fas fa-cog"></i>
+            <span>Settings</span>
+        </a>
+    </nav>
+
+    <!-- Scripts -->
+    <script src="assets/js/main.js"></script>
     <script src="assets/js/storage.js"></script>
-    <script src="assets/js/chart.js"></script>
-    <script src="assets/js/stats.js"></script>
-    <!-- Tambahkan di semua halaman setelah script lainnya -->
-<script src="assets/js/mobile-nav.js"></script>
+    <script src="assets/js/dashboard.js"></script>
+    <script src="assets/js/mobile.js"></script>
 </body>
-
 </html>
