@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Trader's Journal</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <i class="fas fa-chart-line"></i>
+                <span>Trader's Journal</span>
+            </div>
+            <div class="nav-menu">
+                <a href="index.html" class="nav-link"><i class="fas fa-home"></i> Home</a>
+                <a href="dashboard.html" class="nav-link active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                <a href="journal.html" class="nav-link"><i class="fas fa-plus-circle"></i> Jurnal Baru</a>
+                <a href="history.html" class="nav-link"><i class="fas fa-history"></i> Riwayat</a>
+            </div>
+            <div class="nav-user">
+                <span id="currentUser">Trader</span>
+                <button id="logoutBtn" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Dashboard Content -->
+    <div class="container">
+        <div class="dashboard-header">
+            <h1><i class="fas fa-chart-pie"></i> Dashboard Statistik</h1>
+            <p>Analisis performa trading Anda secara real-time</p>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-grid" id="statsGrid">
+            <!-- Stats akan diisi oleh JavaScript -->
+        </div>
+
+        <!-- Charts Section -->
+        <div class="charts-section">
+            <div class="chart-container">
+                <h3><i class="fas fa-chart-line"></i> Performa Equity</h3>
+                <canvas id="equityChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <h3><i class="fas fa-chart-pie"></i> Distribusi Pair</h3>
+                <canvas id="pairChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Recent Trades -->
+        <div class="recent-trades">
+            <h3><i class="fas fa-history"></i> 5 Trade Terakhir</h3>
+            <div class="table-container">
+                <table id="recentTradesTable">
+                    <thead>
+                        <tr>
+                            <th>Tanggal</th>
+                            <th>Pair</th>
+                            <th>Arah</th>
+                            <th>Lot</th>
+                            <th>Entry</th>
+                            <th>Exit</th>
+                            <th>P/L</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recentTradesBody">
+                        <!-- Data akan diisi oleh JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Risk Calculator -->
+        <div class="risk-calculator card">
+            <h3><i class="fas fa-calculator"></i> Risk Management Calculator</h3>
+            <div class="calculator-grid">
+                <div class="calc-input">
+                    <label>Balance ($):</label>
+                    <input type="number" id="balance" placeholder="10000" value="10000">
+                </div>
+                <div class="calc-input">
+                    <label>Risk Per Trade (%):</label>
+                    <input type="number" id="riskPercent" placeholder="2" value="2" min="0.1" max="10" step="0.1">
+                </div>
+                <div class="calc-input">
+                    <label>Stop Loss (pips):</label>
+                    <input type="number" id="stopLoss" placeholder="20" value="20" min="1">
+                </div>
+                <div class="calc-input">
+                    <label>Pair:</label>
+                    <select id="pairSelect">
+                        <option value="EURUSD">EUR/USD</option>
+                        <option value="XAUUSD">Gold (XAU/USD)</option>
+                        <option value="BTCUSD">Bitcoin (BTC/USD)</option>
+                        <option value="GBPUSD">GBP/USD</option>
+                        <option value="USDJPY">USD/JPY</option>
+                    </select>
+                </div>
+            </div>
+            
+            <button id="calculateRisk" class="btn-secondary">Hitung Lot Size</button>
+            
+            <div class="calc-results" id="calcResults">
+                <!-- Hasil kalkulasi akan muncul di sini -->
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/storage.js"></script>
+    <script src="assets/js/chart.js"></script>
+    <script src="assets/js/stats.js"></script>
+</body>
+</html>

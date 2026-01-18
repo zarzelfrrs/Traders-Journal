@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trader's Journal | Login</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="icon" type="image/x-icon" href="assets/img/favicon.ico">
+</head>
+<body>
+    <div class="container auth-container">
+        <div class="auth-card">
+            <div class="logo-header">
+                <i class="fas fa-chart-line logo-icon"></i>
+                <h1>Trader's Journal</h1>
+                <p class="tagline">Catat, Analisis, Profit!</p>
+            </div>
+            
+            <div class="welcome-section">
+                <h2>Selamat Datang Trader!</h2>
+                <p>Jurnal trading modern untuk Forex, Gold, dan Crypto. Simpan dan analisis semua trade Anda di satu tempat.</p>
+                
+                <div class="features-list">
+                    <div class="feature-item">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>100% Aman & Lokal</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-bolt"></i>
+                        <span>Tanpa Backend</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-mobile-alt"></i>
+                        <span>Responsive</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="login-form">
+                <div class="input-group">
+                    <label for="username"><i class="fas fa-user"></i> Nama Trader</label>
+                    <input type="text" id="username" placeholder="Masukkan nama Anda" maxlength="20">
+                </div>
+                
+                <div class="input-group">
+                    <label for="pin"><i class="fas fa-lock"></i> PIN (4 digit)</label>
+                    <input type="password" id="pin" placeholder="1234" maxlength="4" pattern="\d{4}">
+                    <small>PIN ini hanya untuk akses lokal di browser Anda</small>
+                </div>
+                
+                <button id="loginBtn" class="btn-primary">
+                    <i class="fas fa-sign-in-alt"></i> Masuk ke Dashboard
+                </button>
+                
+                <div class="demo-info">
+                    <p><i class="fas fa-info-circle"></i> <strong>Demo Mode:</strong> Data tersimpan di browser Anda sendiri</p>
+                    <p><i class="fas fa-sync-alt"></i> <strong>Reset Data:</strong> Hapus cache browser untuk menghapus semua data</p>
+                </div>
+            </div>
+            
+            <div class="quick-nav">
+                <a href="dashboard.html" class="nav-link">
+                    <i class="fas fa-tachometer-alt"></i> Lihat Dashboard
+                </a>
+                <a href="journal.html" class="nav-link">
+                    <i class="fas fa-plus-circle"></i> Input Trade Baru
+                </a>
+                <a href="history.html" class="nav-link">
+                    <i class="fas fa-history"></i> Lihat Riwayat
+                </a>
+            </div>
+            
+            <footer class="auth-footer">
+                <p>© 2024 Trader's Journal | Dibuat dengan <i class="fas fa-heart"></i> untuk komunitas trader</p>
+                <p class="tech-badge">
+                    <span>HTML5</span>
+                    <span>CSS3</span>
+                    <span>JavaScript</span>
+                    <span>LocalStorage</span>
+                </p>
+            </footer>
+        </div>
+    </div>
+    
+    <script src="assets/js/storage.js"></script>
+    <script src="assets/js/auth.js"></script>
+</body>
+</html>

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Input Jurnal | Trader's Journal</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <i class="fas fa-chart-line"></i>
+                <span>Trader's Journal</span>
+            </div>
+            <div class="nav-menu">
+                <a href="index.html" class="nav-link"><i class="fas fa-home"></i> Home</a>
+                <a href="dashboard.html" class="nav-link"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                <a href="journal.html" class="nav-link active"><i class="fas fa-plus-circle"></i> Jurnal Baru</a>
+                <a href="history.html" class="nav-link"><i class="fas fa-history"></i> Riwayat</a>
+            </div>
+            <div class="nav-user">
+                <span id="currentUser">Trader</span>
+                <button id="logoutBtn" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Journal Form -->
+    <div class="container">
+        <div class="journal-header">
+            <h1><i class="fas fa-book"></i> Jurnal Trading Baru</h1>
+            <p>Catat setiap trade untuk analisis dan pembelajaran</p>
+        </div>
+
+        <form id="journalForm" class="journal-form">
+            <div class="form-grid">
+                <!-- Kolom Kiri - Data Trading -->
+                <div class="form-section">
+                    <h3><i class="fas fa-chart-bar"></i> Data Trading</h3>
+                    
+                    <div class="input-group">
+                        <label for="tradeDate"><i class="fas fa-calendar"></i> Tanggal Trading</label>
+                        <input type="date" id="tradeDate" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="symbol"><i class="fas fa-money-bill-wave"></i> Pair / Symbol</label>
+                        <select id="symbol" required>
+                            <option value="">Pilih Pair</option>
+                            <optgroup label="Forex Major">
+                                <option value="EURUSD">EUR/USD</option>
+                                <option value="GBPUSD">GBP/USD</option>
+                                <option value="USDJPY">USD/JPY</option>
+                                <option value="AUDUSD">AUD/USD</option>
+                                <option value="USDCAD">USD/CAD</option>
+                                <option value="USDCHF">USD/CHF</option>
+                                <option value="NZDUSD">NZD/USD</option>
+                            </optgroup>
+                            <optgroup label="Gold">
+                                <option value="XAUUSD">Gold (XAU/USD)</option>
+                            </optgroup>
+                            <optgroup label="Crypto">
+                                <option value="BTCUSD">Bitcoin (BTC/USD)</option>
+                                <option value="ETHUSD">Ethereum (ETH/USD)</option>
+                                <option value="BNBUSD">BNB (BNB/USD)</option>
+                                <option value="XRPUSD">Ripple (XRP/USD)</option>
+                                <option value="ADAUSD">Cardano (ADA/USD)</option>
+                            </optgroup>
+                            <option value="OTHER">Lainnya</option>
+                        </select>
+                        <input type="text" id="customSymbol" placeholder="Masukkan pair custom" style="display: none; margin-top: 5px;">
+                    </div>
+
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label for="timeframe"><i class="fas fa-clock"></i> Timeframe</label>
+                            <select id="timeframe" required>
+                                <option value="M1">M1</option>
+                                <option value="M5">M5</option>
+                                <option value="M15">M15</option>
+                                <option value="M30">M30</option>
+                                <option value="H1" selected>H1</option>
+                                <option value="H4">H4</option>
+                                <option value="D1">D1</option>
+                                <option value="W1">W1</option>
+                                <option value="MN">Monthly</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="direction"><i class="fas fa-arrow-up"></i> Arah Trade</label>
+                            <select id="direction" required>
+                                <option value="BUY">BUY</option>
+                                <option value="SELL">SELL</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label for="lotSize"><i class="fas fa-balance-scale"></i> Lot Size</label>
+                            <input type="number" id="lotSize" step="0.01" min="0.01" value="0.1" required>
+                            <small>Standard lot = 1.0</small>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="entryPrice"><i class="fas fa-sign-in-alt"></i> Entry Price</label>
+                            <input type="number" id="entryPrice" step="0.00001" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Kolom Kanan - Target & Risk -->
+                <div class="form-section">
+                    <h3><i class="fas fa-bullseye"></i> Target & Risk Management</h3>
+                    
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label for="stopLoss"><i class="fas fa-shield-alt"></i> Stop Loss</label>
+                            <input type="number" id="stopLoss" step="0.00001" required>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="takeProfit"><i class="fas fa-trophy"></i> Take Profit</label>
+                            <input type="number" id="takeProfit" step="0.00001" required>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="exitPrice"><i class="fas fa-sign-out-alt"></i> Exit Price (aktual)</label>
+                        <input type="number" id="exitPrice" step="0.00001">
+                        <small>Biarkan kosong jika trade masih berjalan</small>
+                    </div>
+
+                    <!-- Auto Calculate P/L -->
+                    <div class="pl-calculator card">
+                        <h4><i class="fas fa-calculator"></i> Profit/Loss Calculator</h4>
+                        <div class="pl-display">
+                            <div class="pl-item">
+                                <span>Risk/Reward:</span>
+                                <span id="rrRatio">1:1</span>
+                            </div>
+                            <div class="pl-item">
+                                <span>Pips SL:</span>
+                                <span id="slPips">0</span>
+                            </div>
+                            <div class="pl-item">
+                                <span>Pips TP:</span>
+                                <span id="tpPips">0</span>
+                            </div>
+                            <div class="pl-item total">
+                                <span>Profit/Loss:</span>
+                                <span id="plAmount">$0.00</span>
+                            </div>
+                        </div>
+                        <button type="button" id="calculatePL" class="btn-secondary">
+                            <i class="fas fa-calculator"></i> Hitung P/L
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Catatan & Emosi -->
+            <div class="form-section full-width">
+                <h3><i class="fas fa-sticky-note"></i> Catatan & Analisis</h3>
+                
+                <div class="input-group">
+                    <label for="notes"><i class="fas fa-edit"></i> Catatan Trading</label>
+                    <textarea id="notes" rows="4" placeholder="Apa yang terjadi di trade ini? Analisis teknikal/fundamental, kesalahan yang dibuat, pembelajaran..."></textarea>
+                </div>
+
+                <div class="input-group">
+                    <label><i class="fas fa-heart"></i> Kondisi Emosi</label>
+                    <div class="emotion-grid">
+                        <label class="emotion-option">
+                            <input type="checkbox" name="emotion" value="FOMO">
+                            <span>FOMO</span>
+                        </label>
+                        <label class="emotion-option">
+                            <input type="checkbox" name="emotion" value="OVERTRADE">
+                            <span>Overtrade</span>
+                        </label>
+                        <label class="emotion-option">
+                            <input type="checkbox" name="emotion" value="REVENGE">
+                            <span>Revenge Trade</span>
+                        </label>
+                        <label class="emotion-option">
+                            <input type="checkbox" name="emotion" value="CONFIDENT">
+                            <span>Percaya Diri</span>
+                        </label>
+                        <label class="emotion-option">
+                            <input type="checkbox" name="emotion" value="CALM">
+                            <span>Tenang</span>
+                        </label>
+                        <label class="emotion-option">
+                            <input type="checkbox" name="emotion" value="HESITANT">
+                            <span>Ragu-ragu</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="screenshot"><i class="fas fa-camera"></i> Screenshot URL (opsional)</label>
+                    <input type="text" id="screenshot" placeholder="https://...">
+                </div>
+            </div>
+
+            <!-- Submit Buttons -->
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-save"></i> Simpan Jurnal
+                </button>
+                <button type="button" id="resetForm" class="btn-secondary">
+                    <i class="fas fa-redo"></i> Reset Form
+                </button>
+                <button type="button" id="saveTemplate" class="btn-secondary">
+                    <i class="fas fa-clipboard"></i> Simpan Sebagai Template
+                </button>
+            </div>
+        </form>
+
+        <!-- Recent Trades Preview -->
+        <div class="recent-preview">
+            <h3><i class="fas fa-history"></i> 3 Trade Terakhir</h3>
+            <div class="preview-grid" id="recentPreview">
+                <!-- Data akan diisi oleh JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/storage.js"></script>
+    <script src="assets/js/journal.js"></script>
+</body>
+</html>

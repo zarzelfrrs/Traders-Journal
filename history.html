@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Riwayat Trading | Trader's Journal</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <i class="fas fa-chart-line"></i>
+                <span>Trader's Journal</span>
+            </div>
+            <div class="nav-menu">
+                <a href="index.html" class="nav-link"><i class="fas fa-home"></i> Home</a>
+                <a href="dashboard.html" class="nav-link"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                <a href="journal.html" class="nav-link"><i class="fas fa-plus-circle"></i> Jurnal Baru</a>
+                <a href="history.html" class="nav-link active"><i class="fas fa-history"></i> Riwayat</a>
+            </div>
+            <div class="nav-user">
+                <span id="currentUser">Trader</span>
+                <button id="logoutBtn" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- History Content -->
+    <div class="container">
+        <div class="history-header">
+            <h1><i class="fas fa-history"></i> Riwayat Trading</h1>
+            <p>Kelola dan analisis semua trade yang pernah Anda catat</p>
+        </div>
+
+        <!-- Filters -->
+        <div class="filters card">
+            <h3><i class="fas fa-filter"></i> Filter Data</h3>
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <label for="filterPair"><i class="fas fa-money-bill-wave"></i> Pair</label>
+                    <select id="filterPair">
+                        <option value="">Semua Pair</option>
+                        <option value="EURUSD">EUR/USD</option>
+                        <option value="XAUUSD">Gold (XAU/USD)</option>
+                        <option value="BTCUSD">Bitcoin (BTC/USD)</option>
+                        <!-- Options akan diisi oleh JavaScript -->
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="filterDirection"><i class="fas fa-arrow-up"></i> Arah</label>
+                    <select id="filterDirection">
+                        <option value="">Semua</option>
+                        <option value="BUY">BUY</option>
+                        <option value="SELL">SELL</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="filterResult"><i class="fas fa-chart-line"></i> Hasil</label>
+                    <select id="filterResult">
+                        <option value="">Semua</option>
+                        <option value="WIN">Profit</option>
+                        <option value="LOSS">Loss</option>
+                        <option value="OPEN">Masih Open</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="filterDate"><i class="fas fa-calendar"></i> Periode</label>
+                    <select id="filterDate">
+                        <option value="">Semua Waktu</option>
+                        <option value="week">Minggu Ini</option>
+                        <option value="month">Bulan Ini</option>
+                        <option value="3months">3 Bulan Terakhir</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="filter-actions">
+                <button id="applyFilters" class="btn-secondary">
+                    <i class="fas fa-filter"></i> Terapkan Filter
+                </button>
+                <button id="resetFilters" class="btn-secondary">
+                    <i class="fas fa-redo"></i> Reset Filter
+                </button>
+                <button id="exportData" class="btn-secondary">
+                    <i class="fas fa-download"></i> Export CSV
+                </button>
+                <button id="deleteAllData" class="btn-danger" onclick="confirmDeleteAll()">
+                    <i class="fas fa-trash"></i> Hapus Semua Data
+                </button>
+            </div>
+        </div>
+
+        <!-- Summary Stats -->
+        <div class="summary-stats">
+            <div class="stat-card">
+                <h4>Total Trade</h4>
+                <p id="totalTrades">0</p>
+            </div>
+            <div class="stat-card">
+                <h4>Win Rate</h4>
+                <p id="winRate">0%</p>
+            </div>
+            <div class="stat-card">
+                <h4>Total Profit</h4>
+                <p id="totalProfit">$0.00</p>
+            </div>
+            <div class="stat-card">
+                <h4>Rata-rata RR</h4>
+                <p id="avgRR">0.00</p>
+            </div>
+        </div>
+
+        <!-- Trading History Table -->
+        <div class="table-container">
+            <table id="historyTable">
+                <thead>
+                    <tr>
+                        <th>Tanggal</th>
+                        <th>Pair</th>
+                        <th>Arah</th>
+                        <th>Entry</th>
+                        <th>SL</th>
+                        <th>TP</th>
+                        <th>Exit</th>
+                        <th>Lot</th>
+                        <th>P/L</th>
+                        <th>RR</th>
+                        <th>Status</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTableBody">
+                    <!-- Data akan diisi oleh JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination">
+            <button id="prevPage" class="btn-secondary"><i class="fas fa-chevron-left"></i> Sebelumnya</button>
+            <span id="pageInfo">Halaman 1 dari 1</span>
+            <button id="nextPage" class="btn-secondary">Berikutnya <i class="fas fa-chevron-right"></i></button>
+        </div>
+
+        <!-- Trade Details Modal -->
+        <div id="tradeModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modalTitle">Detail Trade</h3>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body" id="modalBody">
+                    <!-- Detail trade akan diisi oleh JavaScript -->
+                </div>
+                <div class="modal-footer">
+                    <button id="editTrade" class="btn-secondary">Edit</button>
+                    <button id="deleteTrade" class="btn-danger">Hapus</button>
+                    <button class="modal-close btn-primary">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/storage.js"></script>
+    <script src="assets/js/history.js"></script>
+</body>
+</html>
