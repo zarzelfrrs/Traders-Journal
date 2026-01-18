@@ -1,543 +1,602 @@
 /**
- * JOURNAL.JS
+ * JOURNAL.JS - Journal Input Page Logic
  * 
  * File ini menangani form input jurnal trading.
- * Semua logika untuk menghitung P/L, validasi form, dan penyimpanan data ada di sini.
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('📝 Journal.js loaded');
+    console.log('📝 Journal page initialized');
     
-    // Inisialisasi elemen DOM
-    const journalForm = document.getElementById('journalForm');
-    const tradeDateInput = document.getElementById('tradeDate');
+    // Initialize form
+    initJournalForm();
+    
+    // Load recent trades preview
+    loadRecentTrades();
+    
+    // Setup event listeners
+    setupEventListeners();
+    
+    // Check for draft to load
+    checkForDraft();
+});
+
+function initJournalForm() {
+    // Set default date and time
+    const now = new Date();
+    const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    const dateInput = document.getElementById('tradeDate');
+    if (dateInput) {
+        dateInput.value = localDateTime;
+    }
+    
+    // Setup symbol selector
     const symbolSelect = document.getElementById('symbol');
     const customSymbolInput = document.getElementById('customSymbol');
-    const lotSizeInput = document.getElementById('lotSize');
-    const entryPriceInput = document.getElementById('entryPrice');
-    const stopLossInput = document.getElementById('stopLoss');
-    const takeProfitInput = document.getElementById('takeProfit');
-    const exitPriceInput = document.getElementById('exitPrice');
-    const calculatePLButton = document.getElementById('calculatePL');
-    const resetFormButton = document.getElementById('resetForm');
-    const saveTemplateButton = document.getElementById('saveTemplate');
     
-    // Element untuk display hasil kalkulasi
-    const rrRatioSpan = document.getElementById('rrRatio');
-    const slPipsSpan = document.getElementById('slPips');
-    const tpPipsSpan = document.getElementById('tpPips');
-    const plAmountSpan = document.getElementById('plAmount');
-    
-    // Set tanggal default ke hari ini
-    const today = new Date().toISOString().split('T')[0];
-    tradeDateInput.value = today;
-    
-    // Tampilkan input custom symbol jika "Lainnya" dipilih
-    symbolSelect.addEventListener('change', function() {
-        customSymbolInput.style.display = this.value === 'OTHER' ? 'block' : 'none';
-        if (this.value !== 'OTHER') {
-            customSymbolInput.value = '';
-        }
-    });
-    
-    /**
-     * Fungsi untuk menghitung pips berdasarkan pair
-     * Pair forex: 4 decimal (0.0001 = 1 pip)
-     * Gold: 2 decimal (0.01 = 1 pip)
-     * Crypto: bervariasi
-     */
-    function calculatePips(entry, exit, symbol) {
-        let pipValue;
-        
-        // Tentukan pip value berdasarkan pair
-        if (symbol.includes('XAU') || symbol.includes('GOLD')) {
-            // Gold: 2 decimal places
-            pipValue = 0.01;
-        } else if (symbol.includes('BTC') || symbol.includes('ETH') || 
-                   symbol.includes('BNB') || symbol.includes('XRP') || 
-                   symbol.includes('ADA') || symbol.includes('CRYPTO')) {
-            // Crypto: 2 decimal places umumnya
-            pipValue = 0.01;
-        } else {
-            // Forex: 4 decimal places
-            pipValue = 0.0001;
-        }
-        
-        const pips = Math.abs(exit - entry) / pipValue;
-        return Math.round(pips * 100) / 100; // Bulatkan 2 decimal
-    }
-    
-    /**
-     * Fungsi untuk menghitung profit/loss
-     * Formula: (Exit - Entry) * Lot Size * Pip Value * 10
-     * Untuk Gold: 1 lot = 100 ounce
-     * Untuk Forex: 1 lot = 100,000 unit
-     * Untuk Crypto: disesuaikan
-     */
-    function calculateProfitLoss(entry, exit, lotSize, direction, symbol) {
-        // Tentukan contract size
-        let contractSize;
-        let pipValue;
-        
-        if (symbol.includes('XAU') || symbol.includes('GOLD')) {
-            // Gold: 1 lot = 100 ounce, 1 pip = $0.01
-            contractSize = 100;
-            pipValue = 0.01;
-        } else if (symbol.includes('BTC') || symbol.includes('CRYPTO')) {
-            // Crypto: disederhanakan
-            contractSize = 1;
-            pipValue = 1;
-        } else {
-            // Forex: 1 lot = 100,000 unit, 1 pip = $10
-            contractSize = 100000;
-            pipValue = 0.0001;
-        }
-        
-        // Hitung profit
-        let profit;
-        if (direction === 'BUY') {
-            profit = (exit - entry) * contractSize * lotSize;
-        } else {
-            profit = (entry - exit) * contractSize * lotSize;
-        }
-        
-        // Untuk forex, konversi ke USD
-        if (!symbol.includes('XAU') && !symbol.includes('CRYPTO')) {
-            profit = profit / pipValue * 10; // 1 pip = $10 untuk 1 lot standard
-        }
-        
-        return Math.round(profit * 100) / 100;
-    }
-    
-    /**
-     * Update display kalkulasi P/L
-     */
-    function updatePLDisplay() {
-        try {
-            // Ambil nilai dari form
-            const symbol = symbolSelect.value === 'OTHER' 
-                ? customSymbolInput.value 
-                : symbolSelect.value;
-            const entry = parseFloat(entryPriceInput.value);
-            const stopLoss = parseFloat(stopLossInput.value);
-            const takeProfit = parseFloat(takeProfitInput.value);
-            const exit = exitPriceInput.value ? parseFloat(exitPriceInput.value) : null;
-            const lotSize = parseFloat(lotSizeInput.value);
-            const direction = document.getElementById('direction').value;
-            
-            // Validasi input
-            if (!symbol || !entry || !stopLoss || !takeProfit || !lotSize) {
-                throw new Error('Harap isi semua field yang diperlukan');
-            }
-            
-            // Hitung pips
-            const slPips = calculatePips(entry, stopLoss, symbol);
-            const tpPips = calculatePips(entry, takeProfit, symbol);
-            
-            // Hitung RR Ratio
-            const rrRatio = tpPips / slPips;
-            
-            // Update display
-            rrRatioSpan.textContent = rrRatio.toFixed(2) + ':1';
-            slPipsSpan.textContent = slPips;
-            tpPipsSpan.textContent = tpPips;
-            
-            // Hitung P/L jika exit price diisi
-            if (exit) {
-                const profitLoss = calculateProfitLoss(entry, exit, lotSize, direction, symbol);
-                plAmountSpan.textContent = `$${profitLoss.toFixed(2)}`;
-                plAmountSpan.className = profitLoss >= 0 ? 'text-success' : 'text-danger';
+    if (symbolSelect && customSymbolInput) {
+        symbolSelect.addEventListener('change', function() {
+            if (this.value === 'OTHER') {
+                customSymbolInput.classList.remove('hidden');
+                customSymbolInput.required = true;
+                customSymbolInput.focus();
             } else {
-                plAmountSpan.textContent = '$0.00';
-                plAmountSpan.className = '';
+                customSymbolInput.classList.add('hidden');
+                customSymbolInput.required = false;
+                customSymbolInput.value = '';
+            }
+        });
+    }
+    
+    // Setup direction selector
+    const directionInput = document.getElementById('direction');
+    const directionButtons = document.querySelectorAll('.dir-btn');
+    
+    directionButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            // Remove active class from all buttons
+            directionButtons.forEach(b => b.classList.remove('active'));
+            
+            // Add active class to clicked button
+            this.classList.add('active');
+            
+            // Update hidden input
+            const direction = this.dataset.direction;
+            directionInput.value = direction;
+            
+            // Recalculate P/L if needed
+            calculatePL();
+        });
+    });
+    
+    // Setup lot size presets
+    const lotSizeInput = document.getElementById('lotSize');
+    const lotPresets = document.querySelectorAll('.lot-presets button');
+    
+    lotPresets.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const lotSize = this.dataset.lot;
+            lotSizeInput.value = lotSize;
+            
+            // Recalculate P/L
+            calculatePL();
+        });
+    });
+    
+    // Setup form steps
+    setupFormSteps();
+    
+    // Setup auto calculation
+    setupAutoCalculation();
+}
+
+function setupFormSteps() {
+    const steps = document.querySelectorAll('.form-step');
+    const stepButtons = document.querySelectorAll('[data-next], [data-prev]');
+    
+    stepButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const targetStep = this.dataset.next || this.dataset.prev;
+            if (!targetStep) return;
+            
+            // Validate current step before moving
+            if (this.dataset.next && !validateStep(getCurrentStep())) {
+                return;
             }
             
-        } catch (error) {
-            console.warn('⚠️', error.message);
-            // Reset display jika error
-            rrRatioSpan.textContent = '1:1';
-            slPipsSpan.textContent = '0';
-            tpPipsSpan.textContent = '0';
-            plAmountSpan.textContent = '$0.00';
-            plAmountSpan.className = '';
+            // Switch step
+            switchStep(targetStep);
+            
+            // Update progress indicator
+            updateProgressIndicator(targetStep);
+        });
+    });
+}
+
+function getCurrentStep() {
+    const activeStep = document.querySelector('.form-step.active');
+    return activeStep ? parseInt(activeStep.dataset.step) : 1;
+}
+
+function validateStep(stepNumber) {
+    const step = document.querySelector(`.form-step[data-step="${stepNumber}"]`);
+    const requiredInputs = step.querySelectorAll('[required]');
+    
+    let isValid = true;
+    let firstInvalidInput = null;
+    
+    requiredInputs.forEach(input => {
+        if (!input.value.trim()) {
+            isValid = false;
+            input.classList.add('error');
+            
+            if (!firstInvalidInput) {
+                firstInvalidInput = input;
+            }
+        } else {
+            input.classList.remove('error');
+        }
+    });
+    
+    if (!isValid && firstInvalidInput) {
+        App.showNotification('Harap isi semua field yang diperlukan', 'error');
+        firstInvalidInput.focus();
+        App.vibrate();
+    }
+    
+    return isValid;
+}
+
+function switchStep(stepNumber) {
+    // Hide all steps
+    document.querySelectorAll('.form-step').forEach(step => {
+        step.classList.remove('active');
+    });
+    
+    // Show target step
+    const targetStep = document.querySelector(`.form-step[data-step="${stepNumber}"]`);
+    if (targetStep) {
+        targetStep.classList.add('active');
+        
+        // Scroll to top of form
+        targetStep.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function updateProgressIndicator(stepNumber) {
+    // Remove active class from all steps
+    document.querySelectorAll('.step').forEach(step => {
+        step.classList.remove('active');
+    });
+    
+    // Add active class to current and previous steps
+    for (let i = 1; i <= stepNumber; i++) {
+        const step = document.querySelector(`.step[data-step="${i}"]`);
+        if (step) {
+            step.classList.add('active');
+        }
+    }
+}
+
+function setupAutoCalculation() {
+    // Fields that trigger P/L calculation
+    const calculationFields = [
+        'entryPrice', 'stopLoss', 'takeProfit', 'exitPrice', 'lotSize'
+    ];
+    
+    calculationFields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.addEventListener('input', App.debounce(calculatePL, 500));
+        }
+    });
+    
+    // Also recalculate when symbol or direction changes
+    const symbolSelect = document.getElementById('symbol');
+    if (symbolSelect) {
+        symbolSelect.addEventListener('change', calculatePL);
+    }
+    
+    const directionInput = document.getElementById('direction');
+    if (directionInput) {
+        directionInput.addEventListener('change', calculatePL);
+    }
+}
+
+function calculatePL() {
+    try {
+        // Get form values
+        const symbolSelect = document.getElementById('symbol');
+        const symbol = symbolSelect.value === 'OTHER' ? 
+            document.getElementById('customSymbol').value : 
+            symbolSelect.value;
+        
+        const entry = parseFloat(document.getElementById('entryPrice').value);
+        const stopLoss = parseFloat(document.getElementById('stopLoss').value);
+        const takeProfit = parseFloat(document.getElementById('takeProfit').value);
+        const exit = document.getElementById('exitPrice').value ? 
+            parseFloat(document.getElementById('exitPrice').value) : null;
+        const lotSize = parseFloat(document.getElementById('lotSize').value);
+        const direction = document.getElementById('direction').value;
+        
+        // Validate required fields
+        if (!symbol || !entry || !stopLoss || !takeProfit || !lotSize) {
+            return;
+        }
+        
+        // Calculate pips
+        const slPips = App.calculatePips(entry, stopLoss, symbol);
+        const tpPips = App.calculatePips(entry, takeProfit, symbol);
+        
+        // Calculate RR ratio
+        const rrRatio = tpPips / slPips;
+        
+        // Update display
+        document.getElementById('rrRatio').textContent = rrRatio.toFixed(2) + ':1';
+        document.getElementById('slPips').textContent = slPips.toFixed(1);
+        document.getElementById('tpPips').textContent = tpPips.toFixed(1);
+        
+        // Calculate P/L if exit price is provided
+        if (exit) {
+            const profitLoss = App.calculateProfitLoss(entry, exit, lotSize, direction, symbol);
+            const plAmount = document.getElementById('plAmount');
+            plAmount.textContent = App.formatCurrency(profitLoss);
+            plAmount.className = profitLoss >= 0 ? 'text-success' : 'text-danger';
+        } else {
+            document.getElementById('plAmount').textContent = App.formatCurrency(0);
+        }
+        
+    } catch (error) {
+        console.warn('P/L calculation error:', error);
+    }
+}
+
+function setupEventListeners() {
+    // Manual P/L calculation button
+    const calculateBtn = document.getElementById('calculatePL');
+    if (calculateBtn) {
+        calculateBtn.addEventListener('click', calculatePL);
+    }
+    
+    // Form submission
+    const journalForm = document.getElementById('journalForm');
+    if (journalForm) {
+        journalForm.addEventListener('submit', saveTrade);
+    }
+    
+    // Save draft button
+    const saveDraftBtn = document.getElementById('saveDraftBtn');
+    if (saveDraftBtn) {
+        saveDraftBtn.addEventListener('click', saveAsDraft);
+    }
+    
+    // Clear form button
+    const clearFormBtn = document.getElementById('clearFormBtn');
+    if (clearFormBtn) {
+        clearFormBtn.addEventListener('click', clearForm);
+    }
+    
+    // Quick save button in tab bar
+    const quickSaveBtn = document.getElementById('quickSaveBtn');
+    if (quickSaveBtn) {
+        quickSaveBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            saveTrade(new Event('submit'));
+        });
+    }
+}
+
+function saveTrade(e) {
+    if (e) e.preventDefault();
+    
+    try {
+        // Get form values
+        const tradeData = getFormData();
+        
+        // Validate
+        if (!validateTradeData(tradeData)) {
+            return;
+        }
+        
+        // Show loading state
+        const submitBtn = document.querySelector('.btn-success[type="submit"]');
+        if (submitBtn) {
+            submitBtn.classList.add('loading');
+        }
+        
+        // Calculate P/L if exit price exists
+        if (tradeData.exitPrice) {
+            tradeData.profitLoss = App.calculateProfitLoss(
+                tradeData.entryPrice,
+                tradeData.exitPrice,
+                tradeData.lotSize,
+                tradeData.direction,
+                tradeData.symbol
+            );
+            
+            // Calculate pips and RR
+            const slPips = App.calculatePips(tradeData.entryPrice, tradeData.stopLoss, tradeData.symbol);
+            const tpPips = App.calculatePips(tradeData.entryPrice, tradeData.takeProfit, tradeData.symbol);
+            tradeData.rrRatio = (tpPips / slPips).toFixed(2);
+            tradeData.slPips = slPips;
+            tradeData.tpPips = tpPips;
+        }
+        
+        // Save trade
+        Storage.saveTrade(tradeData);
+        
+        // Show success message
+        App.showNotification(
+            `Trade ${tradeData.symbol} ${tradeData.direction} berhasil disimpan!`,
+            'success'
+        );
+        
+        // Clear form
+        clearForm();
+        
+        // Reset to step 1
+        switchStep(1);
+        updateProgressIndicator(1);
+        
+        // Load updated recent trades
+        loadRecentTrades();
+        
+        // Redirect to dashboard after delay
+        setTimeout(() => {
+            window.location.href = 'dashboard.html';
+        }, 1500);
+        
+    } catch (error) {
+        App.showNotification(`Gagal menyimpan: ${error.message}`, 'error');
+        
+        // Reset loading state
+        const submitBtn = document.querySelector('.btn-success[type="submit"]');
+        if (submitBtn) {
+            submitBtn.classList.remove('loading');
+        }
+    }
+}
+
+function getFormData() {
+    const symbolSelect = document.getElementById('symbol');
+    const symbol = symbolSelect.value === 'OTHER' ? 
+        document.getElementById('customSymbol').value : 
+        symbolSelect.value;
+    
+    // Get emotions
+    const emotionCheckboxes = document.querySelectorAll('input[name="emotion"]:checked');
+    const emotions = Array.from(emotionCheckboxes).map(cb => cb.value);
+    
+    return {
+        tradeDate: document.getElementById('tradeDate').value,
+        symbol: symbol,
+        timeframe: document.getElementById('timeframe').value,
+        direction: document.getElementById('direction').value,
+        lotSize: parseFloat(document.getElementById('lotSize').value),
+        entryPrice: parseFloat(document.getElementById('entryPrice').value),
+        stopLoss: parseFloat(document.getElementById('stopLoss').value),
+        takeProfit: parseFloat(document.getElementById('takeProfit').value),
+        exitPrice: document.getElementById('exitPrice').value ? 
+            parseFloat(document.getElementById('exitPrice').value) : null,
+        notes: document.getElementById('notes').value,
+        screenshot: document.getElementById('screenshot').value,
+        emotions: emotions
+    };
+}
+
+function validateTradeData(tradeData) {
+    // Required fields
+    const required = ['tradeDate', 'symbol', 'direction', 'entryPrice', 'stopLoss', 'takeProfit', 'lotSize'];
+    
+    for (const field of required) {
+        if (!tradeData[field]) {
+            App.showNotification(`Field ${field} harus diisi`, 'error');
+            return false;
         }
     }
     
-    /**
-     * Event listener untuk kalkulasi real-time
-     */
-    [entryPriceInput, stopLossInput, takeProfitInput, exitPriceInput, lotSizeInput].forEach(input => {
-        input.addEventListener('input', updatePLDisplay);
-    });
+    // Numeric validation
+    if (tradeData.lotSize <= 0) {
+        App.showNotification('Lot size harus lebih dari 0', 'error');
+        return false;
+    }
     
-    document.getElementById('direction').addEventListener('change', updatePLDisplay);
-    symbolSelect.addEventListener('change', updatePLDisplay);
-    customSymbolInput.addEventListener('input', updatePLDisplay);
+    if (tradeData.entryPrice <= 0) {
+        App.showNotification('Entry price harus lebih dari 0', 'error');
+        return false;
+    }
     
-    // Tombol kalkulasi manual
-    calculatePLButton.addEventListener('click', updatePLDisplay);
+    // Stop loss validation based on direction
+    if (tradeData.direction === 'BUY') {
+        if (tradeData.stopLoss >= tradeData.entryPrice) {
+            App.showNotification('Stop loss harus di bawah entry price untuk BUY', 'error');
+            return false;
+        }
+        if (tradeData.takeProfit <= tradeData.entryPrice) {
+            App.showNotification('Take profit harus di atas entry price untuk BUY', 'error');
+            return false;
+        }
+    } else {
+        if (tradeData.stopLoss <= tradeData.entryPrice) {
+            App.showNotification('Stop loss harus di atas entry price untuk SELL', 'error');
+            return false;
+        }
+        if (tradeData.takeProfit >= tradeData.entryPrice) {
+            App.showNotification('Take profit harus di bawah entry price untuk SELL', 'error');
+            return false;
+        }
+    }
     
-    /**
-     * Reset form ke keadaan awal
-     */
-    resetFormButton.addEventListener('click', function() {
-        if (confirm('Reset form? Semua input akan dikosongkan.')) {
-            journalForm.reset();
-            tradeDateInput.value = today;
-            customSymbolInput.style.display = 'none';
-            customSymbolInput.value = '';
-            updatePLDisplay();
+    return true;
+}
+
+function saveAsDraft() {
+    try {
+        const tradeData = getFormData();
+        
+        // Minimal validation for draft
+        if (!tradeData.symbol || !tradeData.direction) {
+            App.showNotification('Simbol dan arah diperlukan untuk draft', 'error');
+            return;
+        }
+        
+        Storage.saveDraft(tradeData);
+        
+        App.showNotification('Draft berhasil disimpan', 'success');
+        
+        // Update draft count in sidebar
+        updateDraftCount();
+        
+    } catch (error) {
+        App.showNotification('Gagal menyimpan draft', 'error');
+    }
+}
+
+function clearForm() {
+    App.confirmAction(
+        'Hapus semua input form?',
+        function() {
+            const form = document.getElementById('journalForm');
+            if (form) form.reset();
             
-            // Reset checkbox emosi
+            // Reset custom symbol field
+            const customSymbol = document.getElementById('customSymbol');
+            if (customSymbol) {
+                customSymbol.classList.add('hidden');
+                customSymbol.value = '';
+            }
+            
+            // Reset direction buttons
+            document.querySelectorAll('.dir-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector('.dir-btn.buy').classList.add('active');
+            document.getElementById('direction').value = 'BUY';
+            
+            // Reset date
+            const now = new Date();
+            const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+            const dateInput = document.getElementById('tradeDate');
+            if (dateInput) {
+                dateInput.value = localDateTime;
+            }
+            
+            // Reset P/L calculator
+            document.getElementById('rrRatio').textContent = '1:1';
+            document.getElementById('slPips').textContent = '0';
+            document.getElementById('tpPips').textContent = '0';
+            document.getElementById('plAmount').textContent = App.formatCurrency(0);
+            document.getElementById('plAmount').className = '';
+            
+            // Reset emotions
             document.querySelectorAll('input[name="emotion"]').forEach(cb => {
                 cb.checked = false;
             });
             
-            showNotification('Form telah direset', 'success');
+            // Reset to step 1
+            switchStep(1);
+            updateProgressIndicator(1);
+            
+            App.showNotification('Form telah direset', 'success');
         }
-    });
+    );
+}
+
+function loadRecentTrades() {
+    const trades = Storage.getFilteredTrades({ sortBy: 'date-desc' });
+    const recentTrades = trades.slice(0, 3);
+    const container = document.getElementById('recentPreview');
     
-    /**
-     * Simpan sebagai template
-     */
-    saveTemplateButton.addEventListener('click', function() {
-        // Ambil data dari form (kecuali tanggal dan catatan)
-        const template = {
-            symbol: symbolSelect.value,
-            customSymbol: customSymbolInput.value,
-            timeframe: document.getElementById('timeframe').value,
-            direction: document.getElementById('direction').value,
-            lotSize: lotSizeInput.value,
-            stopLoss: stopLossInput.value,
-            takeProfit: takeProfitInput.value,
-            savedAt: new Date().toISOString()
-        };
-        
-        // Simpan ke localStorage
-        try {
-            const templates = JSON.parse(localStorage.getItem('trading_templates') || '[]');
-            templates.push(template);
-            localStorage.setItem('trading_templates', JSON.stringify(templates));
-            
-            showNotification('Template berhasil disimpan!', 'success');
-        } catch (error) {
-            console.error('Error menyimpan template:', error);
-            showNotification('Gagal menyimpan template', 'error');
-        }
-    });
+    if (!container) return;
     
-    /**
-     * Handle form submission
-     */
-    journalForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        try {
-            // Ambil data dari form
-            const tradeData = {
-                tradeDate: tradeDateInput.value,
-                symbol: symbolSelect.value === 'OTHER' ? customSymbolInput.value : symbolSelect.value,
-                timeframe: document.getElementById('timeframe').value,
-                direction: document.getElementById('direction').value,
-                lotSize: parseFloat(lotSizeInput.value),
-                entryPrice: parseFloat(entryPriceInput.value),
-                stopLoss: parseFloat(stopLossInput.value),
-                takeProfit: parseFloat(takeProfitInput.value),
-                exitPrice: exitPriceInput.value ? parseFloat(exitPriceInput.value) : null,
-                notes: document.getElementById('notes').value,
-                screenshot: document.getElementById('screenshot').value,
-                emotions: Array.from(document.querySelectorAll('input[name="emotion"]:checked'))
-                    .map(cb => cb.value)
-            };
-            
-            // Hitung P/L jika ada exit price
-            if (tradeData.exitPrice) {
-                tradeData.profitLoss = calculateProfitLoss(
-                    tradeData.entryPrice,
-                    tradeData.exitPrice,
-                    tradeData.lotSize,
-                    tradeData.direction,
-                    tradeData.symbol
-                );
-                
-                // Hitung pips dan RR
-                const slPips = calculatePips(tradeData.entryPrice, tradeData.stopLoss, tradeData.symbol);
-                const tpPips = calculatePips(tradeData.entryPrice, tradeData.takeProfit, tradeData.symbol);
-                tradeData.rrRatio = (tpPips / slPips).toFixed(2);
-                tradeData.slPips = slPips;
-                tradeData.tpPips = tpPips;
-            }
-            
-            // Validasi data
-            if (!tradeData.symbol) {
-                throw new Error('Harap pilih atau masukkan pair trading');
-            }
-            
-            if (tradeData.entryPrice <= 0 || tradeData.lotSize <= 0) {
-                throw new Error('Entry price dan lot size harus lebih dari 0');
-            }
-            
-            // Simpan ke storage
-            const savedTrade = await Storage.saveTrade(tradeData);
-            
-            // Tampilkan notifikasi sukses
-            showNotification(
-                `Trade ${tradeData.symbol} ${tradeData.direction} berhasil disimpan!`,
-                'success'
-            );
-            
-            // Reset form setelah simpan
-            journalForm.reset();
-            tradeDateInput.value = today;
-            customSymbolInput.style.display = 'none';
-            updatePLDisplay();
-            
-            // Update preview recent trades
-            loadRecentTradesPreview();
-            
-        } catch (error) {
-            console.error('Error menyimpan trade:', error);
-            showNotification(`Gagal menyimpan: ${error.message}`, 'error');
-        }
-    });
-    
-    /**
-     * Fungsi untuk menampilkan notifikasi
-     */
-    function showNotification(message, type = 'info') {
-        // Buat element notifikasi
-        const notification = document.createElement('div');
-        notification.className = `notification notification-${type}`;
-        notification.innerHTML = `
-            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
-            <span>${message}</span>
-            <button class="notification-close">&times;</button>
-        `;
-        
-        // Tambahkan ke body
-        document.body.appendChild(notification);
-        
-        // Auto remove setelah 5 detik
-        setTimeout(() => {
-            notification.classList.add('fade-out');
-            setTimeout(() => notification.remove(), 300);
-        }, 5000);
-        
-        // Close button
-        notification.querySelector('.notification-close').addEventListener('click', () => {
-            notification.classList.add('fade-out');
-            setTimeout(() => notification.remove(), 300);
-        });
-    }
-    
-    /**
-     * Load recent trades untuk preview
-     */
-    function loadRecentTradesPreview() {
-        const recentTrades = Storage.getAllTrades()
-            .sort((a, b) => new Date(b.tradeDate) - new Date(a.tradeDate))
-            .slice(0, 3);
-        
-        const previewGrid = document.getElementById('recentPreview');
-        
-        if (recentTrades.length === 0) {
-            previewGrid.innerHTML = `
-                <div class="preview-card">
-                    <p class="text-muted">Belum ada data trading</p>
-                    <p>Mulai catat trade pertama Anda!</p>
-                </div>
-            `;
-            return;
-        }
-        
-        previewGrid.innerHTML = recentTrades.map(trade => `
-            <div class="preview-card">
-                <div class="preview-header">
-                    <span class="preview-symbol">${trade.symbol}</span>
-                    <span class="preview-direction ${trade.direction.toLowerCase()}">
-                        ${trade.direction}
-                    </span>
-                </div>
-                <div class="preview-details">
-                    <div class="preview-row">
-                        <span>Entry:</span>
-                        <span>${trade.entryPrice}</span>
-                    </div>
-                    ${trade.exitPrice ? `
-                        <div class="preview-row">
-                            <span>Exit:</span>
-                            <span>${trade.exitPrice}</span>
-                        </div>
-                        <div class="preview-row">
-                            <span>P/L:</span>
-                            <span class="${trade.profitLoss >= 0 ? 'text-success' : 'text-danger'}">
-                                $${trade.profitLoss ? trade.profitLoss.toFixed(2) : '0.00'}
-                            </span>
-                        </div>
-                    ` : `
-                        <div class="preview-row">
-                            <span>Status:</span>
-                            <span class="status-open">OPEN</span>
-                        </div>
-                    `}
-                </div>
-                <div class="preview-footer">
-                    <small>${trade.tradeDate} • ${trade.timeframe}</small>
-                </div>
+    if (recentTrades.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <p>Belum ada trade</p>
             </div>
-        `).join('');
+        `;
+        return;
     }
     
-    /**
-     * Load data user untuk navbar
-     */
-    function loadUserData() {
-        const userData = Storage.getUserData();
-        if (userData && userData.username) {
-            const userElement = document.getElementById('currentUser');
-            if (userElement) {
-                userElement.textContent = userData.username;
-            }
+    container.innerHTML = recentTrades.map(trade => `
+        <div class="preview-item" onclick="window.location.href='history.html?trade=${trade.id}'">
+            <div class="preview-symbol">${trade.symbol}</div>
+            <div class="preview-details">
+                <span>${trade.direction} • ${trade.timeframe}</span>
+                <span>${trade.exitPrice ? 
+                    `<span class="${trade.profitLoss >= 0 ? 'text-success' : 'text-danger'}">
+                        ${App.formatCurrency(trade.profitLoss)}
+                    </span>` : 
+                    '<span class="text-info">OPEN</span>'}
+                </span>
+            </div>
+        </div>
+    `).join('');
+}
+
+function checkForDraft() {
+    // Check URL parameters for draft ID
+    const urlParams = new URLSearchParams(window.location.search);
+    const draftId = urlParams.get('draft');
+    
+    if (draftId) {
+        loadDraft(draftId);
+    }
+}
+
+function loadDraft(draftId) {
+    const drafts = Storage.getDrafts();
+    const draft = drafts.find(d => d.id === draftId);
+    
+    if (!draft) {
+        App.showNotification('Draft tidak ditemukan', 'warning');
+        return;
+    }
+    
+    // Load draft data into form
+    document.getElementById('tradeDate').value = draft.tradeDate || '';
+    document.getElementById('symbol').value = draft.symbol || '';
+    document.getElementById('timeframe').value = draft.timeframe || 'H1';
+    document.getElementById('direction').value = draft.direction || 'BUY';
+    document.getElementById('lotSize').value = draft.lotSize || 0.1;
+    document.getElementById('entryPrice').value = draft.entryPrice || '';
+    document.getElementById('stopLoss').value = draft.stopLoss || '';
+    document.getElementById('takeProfit').value = draft.takeProfit || '';
+    document.getElementById('exitPrice').value = draft.exitPrice || '';
+    document.getElementById('notes').value = draft.notes || '';
+    document.getElementById('screenshot').value = draft.screenshot || '';
+    
+    // Update direction buttons
+    document.querySelectorAll('.dir-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.direction === draft.direction) {
+            btn.classList.add('active');
         }
-    }
+    });
     
-    /**
-     * Handle logout
-     */
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', function() {
-            if (confirm('Yakin ingin logout?')) {
-                window.location.href = 'index.html';
-            }
+    // Update emotions
+    if (draft.emotions) {
+        document.querySelectorAll('input[name="emotion"]').forEach(cb => {
+            cb.checked = draft.emotions.includes(cb.value);
         });
     }
     
-    // Inisialisasi
-    updatePLDisplay();
-    loadRecentTradesPreview();
-    loadUserData();
+    // Recalculate P/L
+    calculatePL();
     
-    // Tambahkan style untuk notifikasi
-    const style = document.createElement('style');
-    style.textContent = `
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 1rem 1.5rem;
-            background: var(--bg-card);
-            border-left: 4px solid var(--primary);
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow-lg);
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            z-index: 9999;
-            animation: slideIn 0.3s ease;
-            max-width: 400px;
-        }
-        
-        .notification-success {
-            border-left-color: var(--success);
-        }
-        
-        .notification-error {
-            border-left-color: var(--danger);
-        }
-        
-        .notification i {
-            font-size: 1.25rem;
-        }
-        
-        .notification-success i {
-            color: var(--success);
-        }
-        
-        .notification-error i {
-            color: var(--danger);
-        }
-        
-        .notification-close {
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            font-size: 1.5rem;
-            cursor: pointer;
-            margin-left: auto;
-        }
-        
-        .fade-out {
-            animation: slideOut 0.3s ease forwards;
-        }
-        
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-        
-        @keyframes slideOut {
-            to {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-        }
-        
-        .preview-card {
-            background: var(--bg-primary);
-            border-radius: var(--border-radius);
-            padding: var(--spacing-md);
-            border: 1px solid var(--border-color);
-        }
-        
-        .preview-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.5rem;
-        }
-        
-        .preview-symbol {
-            font-weight: bold;
-            font-size: 1.1rem;
-        }
-        
-        .preview-direction {
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.875rem;
-            font-weight: 500;
-        }
-        
-        .preview-direction.buy {
-            background: rgba(16, 185, 129, 0.2);
-            color: var(--success);
-        }
-        
-        .preview-direction.sell {
-            background: rgba(239, 68, 68, 0.2);
-            color: var(--danger);
-        }
-        
-        .preview-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 0.25rem;
-        }
-        
-        .preview-footer {
-            margin-top: 0.5rem;
-            padding-top: 0.5rem;
-            border-top: 1px solid var(--border-color);
-        }
-    `;
-    document.head.appendChild(style);
-    
-    console.log('✅ Journal.js initialized successfully');
-});
+    App.showNotification('Draft dimuat', 'success');
+}
+
+function updateDraftCount() {
+    const drafts = Storage.getDrafts();
+    const draftCountElement = document.getElementById('draftCount');
+    if (draftCountElement) {
+        draftCountElement.textContent = drafts.length;
+    }
+}
+
+// Initialize draft count
+updateDraftCount();
+
+// Export functions
+window.calculatePL = calculatePL;
+window.clearForm = clearForm;
