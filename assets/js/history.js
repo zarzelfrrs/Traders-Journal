@@ -1,662 +1,843 @@
 /**
- * HISTORY.JS
+ * HISTORY.JS - History Page Logic
  * 
  * File ini menangani halaman riwayat trading.
- * Semua fitur filter, pagination, edit, dan delete ada di sini.
  */
 
+// Global variables for history page
+let currentView = 'list'; // 'list' or 'grid'
+let currentSort = 'date-desc';
+let currentFilters = {};
+let currentPage = 1;
+const itemsPerPage = 10;
+let allTrades = [];
+
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('📜 History.js loaded');
+    console.log('📜 History page initialized');
     
-    // Inisialisasi variabel
-    let currentPage = 1;
-    const itemsPerPage = 10;
-    let currentFilters = {};
-    let allTrades = [];
-    
-    // Load data awal
+    // Load data
     loadHistoryData();
+    
+    // Setup event listeners
     setupEventListeners();
-    loadUserData();
     
-    /**
-     * Load semua data trading
-     */
-    function loadHistoryData() {
-        allTrades = Storage.getAllTrades();
-        updateSummaryStats();
-        populateFilterOptions();
-        applyFilters();
+    // Check for trade ID in URL
+    checkUrlForTrade();
+});
+
+function loadHistoryData() {
+    // Get all trades
+    allTrades = Storage.getTrades();
+    
+    // Update summary stats
+    updateSummaryStats();
+    
+    // Populate filter options
+    populateFilterOptions();
+    
+    // Apply filters and render
+    applyFilters();
+}
+
+function updateSummaryStats() {
+    const stats = Storage.calculateStats();
+    
+    document.getElementById('totalCount').textContent = stats.total;
+    document.getElementById('winRateStat').textContent = `${stats.winRate}%`;
+    document.getElementById('totalProfitStat').textContent = App.formatCurrency(stats.totalProfit);
+    document.getElementById('avgRRStat').textContent = stats.avgRR;
+    
+    // Update sidebar
+    const totalTradesSidebar = document.getElementById('totalTradesSidebar');
+    if (totalTradesSidebar) {
+        totalTradesSidebar.textContent = stats.total;
     }
+}
+
+function populateFilterOptions() {
+    const symbolSelect = document.getElementById('filterSymbol');
+    if (!symbolSelect) return;
     
-    /**
-     * Update summary statistics
-     */
-    function updateSummaryStats() {
-        const stats = Storage.getTradingStats();
-        
-        document.getElementById('totalTrades').textContent = stats.totalTrades;
-        document.getElementById('winRate').textContent = `${stats.winRate}%`;
-        document.getElementById('totalProfit').textContent = formatCurrency(stats.totalProfit);
-        document.getElementById('avgRR').textContent = stats.avgRR;
-    }
+    // Get unique symbols
+    const uniqueSymbols = [...new Set(allTrades.map(trade => trade.symbol))].sort();
     
-    /**
-     * Populate filter options dengan data unik
-     */
-    function populateFilterOptions() {
-        const pairSelect = document.getElementById('filterPair');
-        if (!pairSelect) return;
-        
-        // Dapatkan semua pair unik
-        const uniquePairs = [...new Set(allTrades.map(trade => trade.symbol))];
-        
-        // Simpan current value
-        const currentValue = pairSelect.value;
-        
-        // Clear existing options kecuali "Semua Pair"
-        pairSelect.innerHTML = '<option value="">Semua Pair</option>';
-        
-        // Tambahkan options
-        uniquePairs.sort().forEach(pair => {
-            const option = document.createElement('option');
-            option.value = pair;
-            option.textContent = pair;
-            pairSelect.appendChild(option);
-        });
-        
-        // Restore previous selection
-        pairSelect.value = currentValue;
-    }
+    // Clear existing options except first one
+    symbolSelect.innerHTML = '<option value="">Semua Pair</option>';
     
-    /**
-     * Setup semua event listeners
-     */
-    function setupEventListeners() {
-        // Filter buttons
-        document.getElementById('applyFilters')?.addEventListener('click', applyFilters);
-        document.getElementById('resetFilters')?.addEventListener('click', resetFilters);
-        document.getElementById('exportData')?.addEventListener('click', exportData);
-        document.getElementById('deleteAllData')?.addEventListener('click', deleteAllData);
+    // Add options
+    uniqueSymbols.forEach(symbol => {
+        const option = document.createElement('option');
+        option.value = symbol;
+        option.textContent = symbol;
+        symbolSelect.appendChild(option);
+    });
+}
+
+function applyFilters() {
+    try {
+        // Collect filter values
+        currentFilters = {
+            symbol: document.getElementById('filterSymbol')?.value || '',
+            direction: document.getElementById('filterDirection')?.value || '',
+            result: document.getElementById('filterResult')?.value || '',
+            date: document.getElementById('filterDate')?.value || '',
+            timeframe: document.getElementById('filterTimeframe')?.value || '',
+            sortBy: currentSort
+        };
         
-        // Pagination
-        document.getElementById('prevPage')?.addEventListener('click', goToPrevPage);
-        document.getElementById('nextPage')?.addEventListener('click', goToNextPage);
+        // Filter trades
+        const filteredTrades = Storage.getFilteredTrades(currentFilters);
         
-        // Modal
-        document.querySelectorAll('.modal-close').forEach(btn => {
-            btn.addEventListener('click', closeModal);
-        });
+        // Reset to page 1
+        currentPage = 1;
         
-        // Close modal ketika klik di luar
-        window.addEventListener('click', function(event) {
-            const modal = document.getElementById('tradeModal');
-            if (modal && event.target === modal) {
-                closeModal();
-            }
-        });
-    }
-    
-    /**
-     * Apply filters yang dipilih
-     */
-    function applyFilters() {
-        try {
-            // Collect filter values
-            currentFilters = {
-                pair: document.getElementById('filterPair').value,
-                direction: document.getElementById('filterDirection').value,
-                result: document.getElementById('filterResult').value,
-                date: document.getElementById('filterDate').value
-            };
-            
-            // Filter data
-            const filteredTrades = Storage.getFilteredTrades(currentFilters);
-            
-            // Update table
-            renderTable(filteredTrades);
-            
-            // Reset ke halaman 1
-            currentPage = 1;
-            updatePagination(filteredTrades.length);
-            
-            console.log('✅ Filters applied:', currentFilters);
-            
-        } catch (error) {
-            console.error('❌ Error applying filters:', error);
-            showNotification('Gagal menerapkan filter', 'error');
+        // Render based on current view
+        if (currentView === 'list') {
+            renderDesktopTable(filteredTrades);
+        } else {
+            renderMobileCards(filteredTrades);
         }
-    }
-    
-    /**
-     * Reset semua filter
-     */
-    function resetFilters() {
-        document.getElementById('filterPair').value = '';
-        document.getElementById('filterDirection').value = '';
-        document.getElementById('filterResult').value = '';
-        document.getElementById('filterDate').value = '';
         
-        currentFilters = {};
-        applyFilters();
-        showNotification('Filter telah direset', 'success');
-    }
-    
-    /**
-     * Render table dengan data
-     */
-    function renderTable(trades) {
-        const tbody = document.getElementById('historyTableBody');
-        if (!tbody) return;
+        // Update empty state
+        updateEmptyState(filteredTrades.length);
         
-        if (trades.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="12" class="text-center text-muted">
+        // Update pagination
+        updatePagination(filteredTrades.length);
+        
+    } catch (error) {
+        console.error('Error applying filters:', error);
+        App.showNotification('Gagal menerapkan filter', 'error');
+    }
+}
+
+function renderDesktopTable(trades) {
+    const tbody = document.getElementById('historyTableBody');
+    if (!tbody) return;
+    
+    // Calculate pagination
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const pageTrades = trades.slice(startIndex, endIndex);
+    
+    if (pageTrades.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="9" class="text-center">
+                    <div class="empty-state">
                         <i class="fas fa-database"></i>
                         <p>Tidak ada data trading yang ditemukan</p>
-                        <small>Coba ubah filter atau <a href="journal.html">buat trade baru</a></small>
-                    </td>
-                </tr>
-            `;
-            return;
-        }
-        
-        // Hitung pagination
-        const startIndex = (currentPage - 1) * itemsPerPage;
-        const endIndex = startIndex + itemsPerPage;
-        const pageTrades = trades.slice(startIndex, endIndex);
-        
-        // Render rows
-        tbody.innerHTML = pageTrades.map(trade => {
-            const status = trade.exitPrice 
-                ? (trade.profitLoss > 0 ? 'WIN' : 'LOSS')
-                : 'OPEN';
-            
-            const statusClass = status === 'WIN' ? 'status-win' : 
-                               status === 'LOSS' ? 'status-loss' : 'status-open';
-            
-            const plAmount = trade.profitLoss 
-                ? `$${Math.abs(trade.profitLoss).toFixed(2)}`
-                : '-';
-            
-            const plClass = trade.profitLoss > 0 ? 'text-success' : 
-                           trade.profitLoss < 0 ? 'text-danger' : '';
-            
-            return `
-                <tr data-id="${trade.id}">
-                    <td>${formatDate(trade.tradeDate)}</td>
-                    <td><strong>${trade.symbol}</strong></td>
-                    <td>
-                        <span class="preview-direction ${trade.direction.toLowerCase()}">
-                            ${trade.direction}
-                        </span>
-                    </td>
-                    <td>${trade.entryPrice}</td>
-                    <td>${trade.stopLoss}</td>
-                    <td>${trade.takeProfit}</td>
-                    <td>${trade.exitPrice || '-'}</td>
-                    <td>${trade.lotSize}</td>
-                    <td class="${plClass}">${plAmount}</td>
-                    <td>${trade.rrRatio || '-'}</td>
-                    <td><span class="status-badge ${statusClass}">${status}</span></td>
-                    <td>
-                        <div class="action-buttons">
-                            <button class="action-btn view" onclick="viewTrade('${trade.id}')">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="action-btn edit" onclick="editTrade('${trade.id}')">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="action-btn delete" onclick="deleteTrade('${trade.id}')">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `;
-        }).join('');
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
     }
     
-    /**
-     * Update pagination controls
-     */
-    function updatePagination(totalItems) {
-        const totalPages = Math.ceil(totalItems / itemsPerPage);
-        const pageInfo = document.getElementById('pageInfo');
-        const prevBtn = document.getElementById('prevPage');
-        const nextBtn = document.getElementById('nextPage');
+    tbody.innerHTML = pageTrades.map(trade => {
+        const status = trade.exitPrice ? 
+            (trade.profitLoss > 0 ? 'WIN' : 'LOSS') : 'OPEN';
         
-        if (pageInfo) {
-            pageInfo.textContent = `Halaman ${currentPage} dari ${totalPages}`;
-        }
+        const statusClass = status === 'WIN' ? 'text-success' : 
+                           status === 'LOSS' ? 'text-danger' : 'text-info';
         
-        if (prevBtn) {
-            prevBtn.disabled = currentPage === 1;
-        }
-        
-        if (nextBtn) {
-            nextBtn.disabled = currentPage === totalPages || totalPages === 0;
-        }
-    }
+        return `
+            <tr data-id="${trade.id}">
+                <td>${App.formatDateShort(trade.tradeDate)}</td>
+                <td><strong>${trade.symbol}</strong></td>
+                <td>${trade.timeframe}</td>
+                <td>
+                    <span class="trade-direction ${trade.direction.toLowerCase()}">
+                        ${trade.direction}
+                    </span>
+                </td>
+                <td>${trade.entryPrice}</td>
+                <td>${trade.exitPrice || '-'}</td>
+                <td>${trade.lotSize}</td>
+                <td class="${statusClass}">
+                    ${trade.exitPrice ? App.formatCurrency(trade.profitLoss) : 'OPEN'}
+                </td>
+                <td class="action-cell">
+                    <button class="action-btn view" onclick="viewTrade('${trade.id}')">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="action-btn edit" onclick="editTrade('${trade.id}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="action-btn delete" onclick="deleteTrade('${trade.id}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function renderMobileCards(trades) {
+    const container = document.getElementById('mobileCards');
+    if (!container) return;
     
-    /**
-     * Navigasi ke halaman sebelumnya
-     */
-    function goToPrevPage() {
-        if (currentPage > 1) {
-            currentPage--;
-            applyFilters();
-        }
-    }
+    // Calculate pagination
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const pageTrades = trades.slice(startIndex, endIndex);
     
-    /**
-     * Navigasi ke halaman berikutnya
-     */
-    function goToNextPage() {
-        const totalItems = Storage.getFilteredTrades(currentFilters).length;
-        const totalPages = Math.ceil(totalItems / itemsPerPage);
-        
-        if (currentPage < totalPages) {
-            currentPage++;
-            applyFilters();
-        }
-    }
-    
-    /**
-     * View trade details in modal
-     */
-    window.viewTrade = function(tradeId) {
-        const trade = Storage.getTradeById(tradeId);
-        if (!trade) return;
-        
-        const modal = document.getElementById('tradeModal');
-        const modalBody = document.getElementById('modalBody');
-        const modalTitle = document.getElementById('modalTitle');
-        
-        if (!modal || !modalBody) return;
-        
-        // Set modal title
-        modalTitle.textContent = `${trade.symbol} ${trade.direction} - ${formatDate(trade.tradeDate)}`;
-        
-        // Build modal content
-        modalBody.innerHTML = `
-            <div class="trade-details">
-                <div class="detail-row">
-                    <span class="detail-label">Pair:</span>
-                    <span class="detail-value">${trade.symbol}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Timeframe:</span>
-                    <span class="detail-value">${trade.timeframe}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Direction:</span>
-                    <span class="detail-value ${trade.direction.toLowerCase()}">${trade.direction}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Lot Size:</span>
-                    <span class="detail-value">${trade.lotSize}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Entry Price:</span>
-                    <span class="detail-value">${trade.entryPrice}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Stop Loss:</span>
-                    <span class="detail-value">${trade.stopLoss}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Take Profit:</span>
-                    <span class="detail-value">${trade.takeProfit}</span>
-                </div>
-                ${trade.exitPrice ? `
-                    <div class="detail-row">
-                        <span class="detail-label">Exit Price:</span>
-                        <span class="detail-value">${trade.exitPrice}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="detail-label">Profit/Loss:</span>
-                        <span class="detail-value ${trade.profitLoss >= 0 ? 'text-success' : 'text-danger'}">
-                            $${trade.profitLoss ? trade.profitLoss.toFixed(2) : '0.00'}
-                        </span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="detail-label">RR Ratio:</span>
-                        <span class="detail-value">${trade.rrRatio || '-'}</span>
-                    </div>
-                ` : ''}
-                ${trade.emotions && trade.emotions.length > 0 ? `
-                    <div class="detail-row">
-                        <span class="detail-label">Emosi:</span>
-                        <span class="detail-value">${trade.emotions.join(', ')}</span>
-                    </div>
-                ` : ''}
-                ${trade.notes ? `
-                    <div class="detail-row">
-                        <span class="detail-label">Catatan:</span>
-                        <div class="detail-value notes">${trade.notes}</div>
-                    </div>
-                ` : ''}
-                ${trade.screenshot ? `
-                    <div class="detail-row">
-                        <span class="detail-label">Screenshot:</span>
-                        <a href="${trade.screenshot}" target="_blank" class="detail-value">
-                            Lihat Gambar
-                        </a>
-                    </div>
-                ` : ''}
-                <div class="detail-row">
-                    <span class="detail-label">Dibuat:</span>
-                    <span class="detail-value">${formatDateTime(trade.createdAt)}</span>
-                </div>
-                ${trade.updatedAt ? `
-                    <div class="detail-row">
-                        <span class="detail-label">Terakhir diupdate:</span>
-                        <span class="detail-value">${formatDateTime(trade.updatedAt)}</span>
-                    </div>
-                ` : ''}
+    if (pageTrades.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-database"></i>
+                <p>Tidak ada data trading yang ditemukan</p>
             </div>
         `;
+        return;
+    }
+    
+    container.innerHTML = pageTrades.map(trade => {
+        const status = trade.exitPrice ? 
+            (trade.profitLoss > 0 ? 'WIN' : 'LOSS') : 'OPEN';
         
-        // Setup modal buttons
-        const editBtn = document.getElementById('editTrade');
-        const deleteBtn = document.getElementById('deleteTrade');
+        const statusClass = status === 'WIN' ? 'text-success' : 
+                           status === 'LOSS' ? 'text-danger' : 'text-info';
         
-        if (editBtn) {
-            editBtn.onclick = function() {
-                closeModal();
-                editTrade(tradeId);
-            };
-        }
-        
-        if (deleteBtn) {
-            deleteBtn.onclick = function() {
-                if (confirm('Yakin ingin menghapus trade ini?')) {
-                    deleteTrade(tradeId);
-                    closeModal();
-                }
-            };
-        }
-        
-        // Show modal
-        modal.classList.add('show');
-    };
-    
-    /**
-     * Edit trade (redirect ke journal dengan data)
-     */
-    window.editTrade = function(tradeId) {
-        // Simpan trade ID di sessionStorage untuk di-load di journal page
-        sessionStorage.setItem('editTradeId', tradeId);
-        
-        // Redirect ke journal page
-        window.location.href = 'journal.html';
-    };
-    
-    /**
-     * Delete trade
-     */
-    window.deleteTrade = async function(tradeId) {
-        try {
-            if (!confirm('Yakin ingin menghapus trade ini?')) {
-                return;
-            }
-            
-            await Storage.deleteTrade(tradeId);
-            
-            // Reload data
-            loadHistoryData();
-            
-            showNotification('Trade berhasil dihapus', 'success');
-            
-        } catch (error) {
-            console.error('❌ Error deleting trade:', error);
-            showNotification('Gagal menghapus trade', 'error');
-        }
-    };
-    
-    /**
-     * Export data ke CSV
-     */
-    function exportData() {
-        try {
-            const csvContent = Storage.exportToCSV();
-            
-            // Create download link
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            
-            link.href = url;
-            link.download = `trading-journal-${new Date().toISOString().split('T')[0]}.csv`;
-            link.click();
-            
-            URL.revokeObjectURL(url);
-            
-            showNotification('Data berhasil diekspor ke CSV', 'success');
-            
-        } catch (error) {
-            console.error('❌ Error exporting data:', error);
-            showNotification(`Gagal mengekspor: ${error.message}`, 'error');
-        }
-    }
-    
-    /**
-     * Delete semua data
-     */
-    async function deleteAllData() {
-        try {
-            const confirmed = await Storage.deleteAllTrades();
-            
-            if (confirmed) {
-                // Reload data
-                loadHistoryData();
-                showNotification('Semua data berhasil dihapus', 'success');
-            }
-            
-        } catch (error) {
-            console.error('❌ Error deleting all data:', error);
-            showNotification('Gagal menghapus data', 'error');
-        }
-    }
-    
-    /**
-     * Close modal
-     */
-    function closeModal() {
-        const modal = document.getElementById('tradeModal');
-        if (modal) {
-            modal.classList.remove('show');
-        }
-    }
-    
-    /**
-     * Format currency
-     */
-    function formatCurrency(amount) {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
-            minimumFractionDigits: 2
-        }).format(amount);
-    }
-    
-    /**
-     * Format date
-     */
-    function formatDate(dateString) {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('id-ID', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        });
-    }
-    
-    /**
-     * Format date time
-     */
-    function formatDateTime(dateTimeString) {
-        const date = new Date(dateTimeString);
-        return date.toLocaleDateString('id-ID', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    }
-    
-    /**
-     * Load data user untuk navbar
-     */
-    function loadUserData() {
-        const userData = Storage.getUserData();
-        if (userData && userData.username) {
-            const userElement = document.getElementById('currentUser');
-            if (userElement) {
-                userElement.textContent = userData.username;
-            }
-        }
-    }
-    
-    /**
-     * Handle logout
-     */
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', function() {
-            if (confirm('Yakin ingin logout?')) {
-                window.location.href = 'index.html';
-            }
-        });
-    }
-    
-    /**
-     * Fungsi untuk menampilkan notifikasi
-     */
-    function showNotification(message, type = 'info') {
-        // Buat element notifikasi
-        const notification = document.createElement('div');
-        notification.className = `notification notification-${type}`;
-        notification.innerHTML = `
-            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
-            <span>${message}</span>
-            <button class="notification-close">&times;</button>
+        return `
+            <div class="mobile-card" data-id="${trade.id}">
+                <div class="card-header">
+                    <div class="card-symbol">${trade.symbol}</div>
+                    <div class="card-direction ${trade.direction.toLowerCase()}">
+                        ${trade.direction}
+                    </div>
+                </div>
+                
+                <div class="card-details">
+                    <div class="card-detail">
+                        <div class="detail-label">Tanggal</div>
+                        <div class="detail-value">${App.formatDateShort(trade.tradeDate)}</div>
+                    </div>
+                    <div class="card-detail">
+                        <div class="detail-label">Timeframe</div>
+                        <div class="detail-value">${trade.timeframe}</div>
+                    </div>
+                    <div class="card-detail">
+                        <div class="detail-label">Entry</div>
+                        <div class="detail-value">${trade.entryPrice}</div>
+                    </div>
+                    <div class="card-detail">
+                        <div class="detail-label">Exit</div>
+                        <div class="detail-value">${trade.exitPrice || '-'}</div>
+                    </div>
+                    <div class="card-detail">
+                        <div class="detail-label">Lot</div>
+                        <div class="detail-value">${trade.lotSize}</div>
+                    </div>
+                    <div class="card-detail">
+                        <div class="detail-label">P/L</div>
+                        <div class="detail-value ${statusClass}">
+                            ${trade.exitPrice ? App.formatCurrency(trade.profitLoss) : 'OPEN'}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-actions">
+                    <button class="action-btn view" onclick="viewTrade('${trade.id}')">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="action-btn edit" onclick="editTrade('${trade.id}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="action-btn delete" onclick="deleteTrade('${trade.id}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
         `;
+    }).join('');
+}
+
+function updateEmptyState(tradeCount) {
+    const emptyState = document.getElementById('emptyState');
+    if (!emptyState) return;
+    
+    if (tradeCount === 0) {
+        emptyState.classList.remove('hidden');
+    } else {
+        emptyState.classList.add('hidden');
+    }
+}
+
+function updatePagination(totalItems) {
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const pageInfo = document.querySelector('.load-more');
+    
+    if (!pageInfo) return;
+    
+    if (totalPages <= 1 || currentPage >= totalPages) {
+        pageInfo.innerHTML = '';
+        return;
+    }
+    
+    pageInfo.innerHTML = `
+        <button class="btn-secondary" id="loadMoreBtn">
+            <i class="fas fa-spinner fa-spin hidden"></i>
+            <span>Muat lebih banyak (${currentPage}/${totalPages})</span>
+        </button>
+    `;
+    
+    const loadMoreBtn = document.getElementById('loadMoreBtn');
+    if (loadMoreBtn) {
+        loadMoreBtn.addEventListener('click', loadMoreTrades);
+    }
+}
+
+function loadMoreTrades() {
+    currentPage++;
+    const filteredTrades = Storage.getFilteredTrades(currentFilters);
+    
+    if (currentView === 'list') {
+        loadMoreDesktopTable(filteredTrades);
+    } else {
+        loadMoreMobileCards(filteredTrades);
+    }
+    
+    updatePagination(filteredTrades.length);
+}
+
+function loadMoreDesktopTable(trades) {
+    const tbody = document.getElementById('historyTableBody');
+    if (!tbody) return;
+    
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const pageTrades = trades.slice(startIndex, endIndex);
+    
+    if (pageTrades.length === 0) return;
+    
+    const newRows = pageTrades.map(trade => {
+        const status = trade.exitPrice ? 
+            (trade.profitLoss > 0 ? 'WIN' : 'LOSS') : 'OPEN';
         
-        // Tambahkan ke body
-        document.body.appendChild(notification);
+        const statusClass = status === 'WIN' ? 'text-success' : 
+                           status === 'LOSS' ? 'text-danger' : 'text-info';
         
-        // Auto remove setelah 5 detik
-        setTimeout(() => {
-            notification.classList.add('fade-out');
-            setTimeout(() => notification.remove(), 300);
-        }, 5000);
+        return `
+            <tr data-id="${trade.id}">
+                <td>${App.formatDateShort(trade.tradeDate)}</td>
+                <td><strong>${trade.symbol}</strong></td>
+                <td>${trade.timeframe}</td>
+                <td>
+                    <span class="trade-direction ${trade.direction.toLowerCase()}">
+                        ${trade.direction}
+                    </span>
+                </td>
+                <td>${trade.entryPrice}</td>
+                <td>${trade.exitPrice || '-'}</td>
+                <td>${trade.lotSize}</td>
+                <td class="${statusClass}">
+                    ${trade.exitPrice ? App.formatCurrency(trade.profitLoss) : 'OPEN'}
+                </td>
+                <td class="action-cell">
+                    <button class="action-btn view" onclick="viewTrade('${trade.id}')">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="action-btn edit" onclick="editTrade('${trade.id}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="action-btn delete" onclick="deleteTrade('${trade.id}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    tbody.insertAdjacentHTML('beforeend', newRows);
+}
+
+function loadMoreMobileCards(trades) {
+    const container = document.getElementById('mobileCards');
+    if (!container) return;
+    
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const pageTrades = trades.slice(startIndex, endIndex);
+    
+    if (pageTrades.length === 0) return;
+    
+    const newCards = pageTrades.map(trade => {
+        const status = trade.exitPrice ? 
+            (trade.profitLoss > 0 ? 'WIN' : 'LOSS') : 'OPEN';
         
-        // Close button
-        notification.querySelector('.notification-close').addEventListener('click', () => {
-            notification.classList.add('fade-out');
-            setTimeout(() => notification.remove(), 300);
+        const statusClass = status === 'WIN' ? 'text-success' : 
+                           status === 'LOSS' ? 'text-danger' : 'text-info';
+        
+        return `
+            <div class="mobile-card" data-id="${trade.id}">
+                <div class="card-header">
+                    <div class="card-symbol">${trade.symbol}</div>
+                    <div class="card-direction ${trade.direction.toLowerCase()}">
+                        ${trade.direction}
+                    </div>
+                </div>
+                
+                <div class="card-details">
+                    <div class="card-detail">
+                        <div class="detail-label">Tanggal</div>
+                        <div class="detail-value">${App.formatDateShort(trade.tradeDate)}</div>
+                    </div>
+                    <div class="card-detail">
+                        <div class="detail-label">Timeframe</div>
+                        <div class="detail-value">${trade.timeframe}</div>
+                    </div>
+                    <div class="card-detail">
+                        <div class="detail-label">Entry</div>
+                        <div class="detail-value">${trade.entryPrice}</div>
+                    </div>
+                    <div class="card-detail">
+                        <div class="detail-label">Exit</div>
+                        <div class="detail-value">${trade.exitPrice || '-'}</div>
+                    </div>
+                    <div class="card-detail">
+                        <div class="detail-label">Lot</div>
+                        <div class="detail-value">${trade.lotSize}</div>
+                    </div>
+                    <div class="card-detail">
+                        <div class="detail-label">P/L</div>
+                        <div class="detail-value ${statusClass}">
+                            ${trade.exitPrice ? App.formatCurrency(trade.profitLoss) : 'OPEN'}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-actions">
+                    <button class="action-btn view" onclick="viewTrade('${trade.id}')">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="action-btn edit" onclick="editTrade('${trade.id}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="action-btn delete" onclick="deleteTrade('${trade.id}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    container.insertAdjacentHTML('beforeend', newCards);
+}
+
+function viewTrade(tradeId) {
+    const trade = Storage.getTradeById(tradeId);
+    if (!trade) {
+        App.showNotification('Trade tidak ditemukan', 'error');
+        return;
+    }
+    
+    // Build modal content
+    const modalBody = document.getElementById('modalBody');
+    const modalTitle = document.getElementById('modalTitle');
+    
+    if (!modalBody || !modalTitle) return;
+    
+    modalTitle.textContent = `${trade.symbol} ${trade.direction} - ${App.formatDateShort(trade.tradeDate)}`;
+    
+    const status = trade.exitPrice ? 
+        (trade.profitLoss > 0 ? 'WIN' : 'LOSS') : 'OPEN';
+    
+    const statusClass = status === 'WIN' ? 'success' : 
+                       status === 'LOSS' ? 'danger' : 'info';
+    
+    modalBody.innerHTML = `
+        <div class="trade-details-modal">
+            <div class="detail-section">
+                <h4><i class="fas fa-chart-bar"></i> Trading Data</h4>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <span class="detail-label">Pair:</span>
+                        <span class="detail-value">${trade.symbol}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Timeframe:</span>
+                        <span class="detail-value">${trade.timeframe}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Direction:</span>
+                        <span class="detail-value ${trade.direction.toLowerCase()}">${trade.direction}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Lot Size:</span>
+                        <span class="detail-value">${trade.lotSize}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <h4><i class="fas fa-bullseye"></i> Prices</h4>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <span class="detail-label">Entry Price:</span>
+                        <span class="detail-value">${trade.entryPrice}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Stop Loss:</span>
+                        <span class="detail-value">${trade.stopLoss}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Take Profit:</span>
+                        <span class="detail-value">${trade.takeProfit}</span>
+                    </div>
+                    ${trade.exitPrice ? `
+                        <div class="detail-item">
+                            <span class="detail-label">Exit Price:</span>
+                            <span class="detail-value">${trade.exitPrice}</span>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+            
+            ${trade.exitPrice ? `
+                <div class="detail-section">
+                    <h4><i class="fas fa-calculator"></i> Results</h4>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">Profit/Loss:</span>
+                            <span class="detail-value ${trade.profitLoss >= 0 ? 'text-success' : 'text-danger'}">
+                                ${App.formatCurrency(trade.profitLoss)}
+                            </span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">RR Ratio:</span>
+                            <span class="detail-value">${trade.rrRatio || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Pips SL:</span>
+                            <span class="detail-value">${trade.slPips || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Pips TP:</span>
+                            <span class="detail-value">${trade.tpPips || '-'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Status:</span>
+                            <span class="detail-value status-${statusClass}">${status}</span>
+                        </div>
+                    </div>
+                </div>
+            ` : ''}
+            
+            ${trade.emotions && trade.emotions.length > 0 ? `
+                <div class="detail-section">
+                    <h4><i class="fas fa-heart"></i> Emotions</h4>
+                    <div class="emotions-list">
+                        ${trade.emotions.map(emotion => `
+                            <span class="emotion-tag">${emotion}</span>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : ''}
+            
+            ${trade.notes ? `
+                <div class="detail-section">
+                    <h4><i class="fas fa-sticky-note"></i> Notes</h4>
+                    <div class="notes-content">
+                        ${trade.notes}
+                    </div>
+                </div>
+            ` : ''}
+            
+            ${trade.screenshot ? `
+                <div class="detail-section">
+                    <h4><i class="fas fa-camera"></i> Screenshot</h4>
+                    <a href="${trade.screenshot}" target="_blank" class="screenshot-link">
+                        <i class="fas fa-external-link-alt"></i> View Screenshot
+                    </a>
+                </div>
+            ` : ''}
+            
+            <div class="detail-section">
+                <h4><i class="fas fa-info-circle"></i> Metadata</h4>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <span class="detail-label">Created:</span>
+                        <span class="detail-value">${App.formatDate(trade.createdAt)}</span>
+                    </div>
+                    ${trade.updatedAt ? `
+                        <div class="detail-item">
+                            <span class="detail-label">Last Updated:</span>
+                            <span class="detail-value">${App.formatDate(trade.updatedAt)}</span>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Set modal button actions
+    const editBtn = document.getElementById('editTradeBtn');
+    const deleteBtn = document.getElementById('deleteTradeBtn');
+    
+    if (editBtn) {
+        editBtn.onclick = function() {
+            closeModal();
+            editTrade(tradeId);
+        };
+    }
+    
+    if (deleteBtn) {
+        deleteBtn.onclick = function() {
+            closeModal();
+            deleteTrade(tradeId);
+        };
+    }
+    
+    // Show modal
+    showModal();
+}
+
+function editTrade(tradeId) {
+    // Store trade ID in sessionStorage for journal page to load
+    sessionStorage.setItem('editTradeId', tradeId);
+    
+    // Redirect to journal page
+    window.location.href = 'journal.html';
+}
+
+function deleteTrade(tradeId) {
+    App.confirmAction(
+        'Hapus trade ini? Tindakan ini tidak dapat dibatalkan.',
+        function() {
+            try {
+                Storage.deleteTrade(tradeId);
+                
+                // Reload history data
+                loadHistoryData();
+                
+                App.showNotification('Trade berhasil dihapus', 'success');
+                
+            } catch (error) {
+                App.showNotification('Gagal menghapus trade', 'error');
+            }
+        }
+    );
+}
+
+function showModal() {
+    const modal = document.getElementById('tradeModal');
+    if (modal) {
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function closeModal() {
+    const modal = document.getElementById('tradeModal');
+    if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+}
+
+function setupEventListeners() {
+    // Filter toggle
+    const filterToggle = document.getElementById('filterToggle');
+    const filterPanel = document.getElementById('filterPanel');
+    const filterClose = document.getElementById('filterClose');
+    const tabFilter = document.getElementById('tabFilter');
+    
+    if (filterToggle && filterPanel) {
+        filterToggle.addEventListener('click', function() {
+            filterPanel.classList.add('active');
         });
     }
     
-    // Tambahkan style untuk modal dan details
-    const style = document.createElement('style');
-    style.textContent = `
-        .trade-details {
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-        }
-        
-        .detail-row {
-            display: flex;
-            border-bottom: 1px solid var(--border-color);
-            padding: 0.5rem 0;
-        }
-        
-        .detail-row:last-child {
-            border-bottom: none;
-        }
-        
-        .detail-label {
-            width: 180px;
-            font-weight: 500;
-            color: var(--text-secondary);
-        }
-        
-        .detail-value {
-            flex: 1;
-            color: var(--text-primary);
-        }
-        
-        .detail-value.notes {
-            white-space: pre-wrap;
-            background: var(--bg-primary);
-            padding: 0.75rem;
-            border-radius: var(--border-radius);
-            margin-top: 0.5rem;
-        }
-        
-        .action-buttons {
-            display: flex;
-            gap: 0.5rem;
-        }
-        
-        .action-btn {
-            width: 32px;
-            height: 32px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-        }
-        
-        .action-btn:hover {
-            transform: translateY(-2px);
-        }
-        
-        .action-btn.view {
-            background: var(--info);
-            color: white;
-        }
-        
-        .action-btn.edit {
-            background: var(--warning);
-            color: white;
-        }
-        
-        .action-btn.delete {
-            background: var(--danger);
-            color: white;
-        }
-        
-        .no-data {
-            text-align: center;
-            padding: 3rem 1rem;
-            color: var(--text-muted);
-        }
-        
-        .no-data i {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            opacity: 0.5;
-        }
-        
-        .text-center {
-            text-align: center;
-        }
-        
-        .text-muted {
-            color: var(--text-muted);
-        }
-    `;
-    document.head.appendChild(style);
+    if (filterClose && filterPanel) {
+        filterClose.addEventListener('click', function() {
+            filterPanel.classList.remove('active');
+        });
+    }
     
-    console.log('✅ History.js initialized successfully');
-});
+    if (tabFilter && filterPanel) {
+        tabFilter.addEventListener('click', function(e) {
+            e.preventDefault();
+            filterPanel.classList.toggle('active');
+        });
+    }
+    
+    // Filter actions
+    const applyFiltersBtn = document.getElementById('applyFilters');
+    const resetFiltersBtn = document.getElementById('resetFilters');
+    
+    if (applyFiltersBtn) {
+        applyFiltersBtn.addEventListener('click', function() {
+            filterPanel.classList.remove('active');
+            applyFilters();
+        });
+    }
+    
+    if (resetFiltersBtn) {
+        resetFiltersBtn.addEventListener('click', function() {
+            // Reset all filter inputs
+            document.getElementById('filterSymbol').value = '';
+            document.getElementById('filterDirection').value = '';
+            document.getElementById('filterResult').value = '';
+            document.getElementById('filterDate').value = '';
+            document.getElementById('filterTimeframe').value = '';
+            
+            // Apply empty filters
+            currentFilters = {};
+            applyFilters();
+            
+            App.showNotification('Filter telah direset', 'success');
+        });
+    }
+    
+    // View toggle
+    const viewButtons = document.querySelectorAll('.view-btn');
+    viewButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const view = this.dataset.view;
+            
+            // Update active button
+            viewButtons.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Change view
+            switchView(view);
+        });
+    });
+    
+    // Sort options
+    const sortSelect = document.getElementById('sortBy');
+    if (sortSelect) {
+        sortSelect.addEventListener('change', function() {
+            currentSort = this.value;
+            applyFilters();
+        });
+    }
+    
+    // Export button
+    const exportBtn = document.getElementById('exportBtn');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', exportData);
+    }
+    
+    // Clear all button
+    const clearAllBtn = document.getElementById('clearAllBtn');
+    if (clearAllBtn) {
+        clearAllBtn.addEventListener('click', clearAllData);
+    }
+    
+    // Modal close
+    const modalClose = document.getElementById('modalClose');
+    const confirmCancel = document.getElementById('confirmCancel');
+    
+    if (modalClose) {
+        modalClose.addEventListener('click', closeModal);
+    }
+    
+    if (confirmCancel) {
+        confirmCancel.addEventListener('click', closeConfirmModal);
+    }
+    
+    // Close modal on background click
+    document.addEventListener('click', function(e) {
+        const modal = document.getElementById('tradeModal');
+        if (modal && e.target === modal) {
+            closeModal();
+        }
+        
+        const confirmModal = document.getElementById('confirmModal');
+        if (confirmModal && e.target === confirmModal) {
+            closeConfirmModal();
+        }
+    });
+}
+
+function switchView(view) {
+    currentView = view;
+    
+    // Show/hide appropriate containers
+    const desktopTable = document.querySelector('.desktop-table');
+    const mobileCards = document.getElementById('mobileCards');
+    
+    if (view === 'list') {
+        if (desktopTable) desktopTable.style.display = 'block';
+        if (mobileCards) mobileCards.style.display = 'none';
+    } else {
+        if (desktopTable) desktopTable.style.display = 'none';
+        if (mobileCards) mobileCards.style.display = 'flex';
+    }
+    
+    // Re-render with current view
+    applyFilters();
+}
+
+function exportData() {
+    try {
+        const csvContent = Storage.exportToCSV();
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        
+        link.href = url;
+        link.download = `trading-journal-${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        URL.revokeObjectURL(url);
+        
+        App.showNotification('Data berhasil diekspor ke CSV', 'success');
+        
+    } catch (error) {
+        App.showNotification(`Gagal mengekspor: ${error.message}`, 'error');
+    }
+}
+
+function clearAllData() {
+    App.confirmAction(
+        'Hapus SEMUA data trading? Tindakan ini tidak dapat dibatalkan.',
+        function() {
+            try {
+                Storage.deleteAllTrades();
+                loadHistoryData();
+                
+                App.showNotification('Semua data berhasil dihapus', 'success');
+                
+            } catch (error) {
+                App.showNotification('Gagal menghapus data', 'error');
+            }
+        }
+    );
+}
+
+function checkUrlForTrade() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tradeId = urlParams.get('trade');
+    
+    if (tradeId) {
+        // Auto-open trade modal
+        setTimeout(() => {
+            viewTrade(tradeId);
+        }, 500);
+    }
+}
+
+function closeConfirmModal() {
+    const modal = document.getElementById('confirmModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+// Initialize with list view on desktop, grid on mobile
+if (App.isMobile) {
+    currentView = 'grid';
+    switchView('grid');
+} else {
+    switchView('list');
+}
+
+// Export functions
+window.viewTrade = viewTrade;
+window.editTrade = editTrade;
+window.deleteTrade = deleteTrade;
+window.closeModal = closeModal;
